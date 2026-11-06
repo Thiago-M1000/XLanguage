@@ -1,0 +1,26 @@
+---
+interface Props { compact?: boolean; }
+const { compact = false } = Astro.props;
+---
+<button type="button" class:list={["theme-toggle", "xl-theme-button", { "rail-control is-compact": compact }]} aria-label="Ativar modo escuro" aria-pressed="false" title="Alternar tema">
+  <svg class="theme-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" /></svg>
+  <svg class="theme-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.4 1.4M17.6 17.6 19 19M5 19l1.4-1.4M17.6 6.4 19 5" /></svg>
+  <span class="theme-button-label"><span class="theme-moon">Modo escuro</span><span class="theme-sun">Modo claro</span></span>
+</button>
+<script>
+  const themeButtons = document.querySelectorAll<HTMLButtonElement>(".theme-toggle");
+  function syncTheme() {
+    const dark = document.documentElement.classList.contains("dark");
+    themeButtons.forEach(button => {
+      button.setAttribute("aria-pressed", String(dark));
+      button.setAttribute("aria-label", dark ? "Ativar modo claro" : "Ativar modo escuro");
+    });
+  }
+  themeButtons.forEach(button => button.addEventListener("click", () => {
+    const dark = document.documentElement.classList.toggle("dark");
+    document.documentElement.dataset.theme = dark ? "dark" : "light";
+    try { localStorage.setItem("theme", dark ? "dark" : "light"); } catch {}
+    syncTheme();
+  }));
+  syncTheme();
+</script>

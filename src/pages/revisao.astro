@@ -1,0 +1,42 @@
+---
+import AppLayout from '../layouts/AppLayout.astro';import {rpc,mensagemErro,uuid,type Palavra,type Baralho} from '../lib/estudo';
+const param=Astro.url.searchParams.get('baralho');const deck=uuid(param)?param:null;const language=Astro.locals.perfil.idioma_ativo;
+let cartoes:Palavra[]=[],baralhos:Baralho[]=[],erro='';
+try{[cartoes,baralhos]=await Promise.all([rpc<Palavra[]>(Astro.locals.supabase,'xl_fila',{p_idioma:language,p_baralho:deck}),rpc<Baralho[]>(Astro.locals.supabase,'xl_baralhos_resumo',{p_idioma:language})]);if(deck&&!baralhos.some(b=>b.id===deck))erro='Baralho não encontrado neste idioma.';}catch(e){erro=mensagemErro(e)}
+if(erro)cartoes=[];
+---
+<AppLayout title="Revisão" active="revisar"><div class="xl-page xl-review-page">
+ <div class="xl-review-context"><a href={deck?'/baralhos':'/'} class="xl-text-link">← Voltar</a><span class="xl-help">{deck?baralhos.find(b=>b.id===deck)?.nome:'Todas as palavras vencidas'}</span></div>
+ <div id="dados" hidden data-cartoes={JSON.stringify(cartoes)} data-timezone={Astro.locals.perfil.timezone}></div>
+ {erro&&<p role="alert" class="xl-error mt-5">{erro}</p>}
+ {cartoes.length>0&&<><div class="mt-6 flex items-center justify-between text-[13px] text-muted"><span>Sessão de até 100 cartões</span><span id="contador" aria-live="polite"></span></div><div id="progresso" class="xl-progress" role="progressbar" aria-label="Progresso da revisão" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="barra" style="width:0%"></span></div>
+ <div id="area" class="mt-6"><article class="xl-panel xl-flashcard"><p id="classe" class="text-[13px] text-muted"></p><p id="frente" class="xl-flashcard-word"></p><button id="ouvir" type="button" class="xl-secondary mt-5">Ouvir pronúncia</button><p id="exemplo" class="mt-5 max-w-[460px] break-words text-base text-muted"></p><div id="resposta" class="mt-7 hidden w-full border-t border-line pt-7" aria-live="polite"><p id="verso" class="break-words text-[28px] font-semibold text-accent"></p></div></article><div id="acoes-mostrar" class="mt-4"><button id="mostrar" type="button" class="xl-primary w-full" aria-controls="resposta" aria-expanded="false">Mostrar resposta</button></div><div id="acoes-nota" class="mt-4 hidden"><p class="mb-3 text-center text-sm text-muted">Como foi lembrar?</p><div class="grid grid-cols-2 gap-3 sm:grid-cols-4">{['Errei','Difícil','Bom','Fácil'].map((nome,i)=><button type="button" data-nota={i+1} class="nota xl-rating"><span>{nome}</span><span data-intervalo></span></button>)}</div></div><p id="save-status" role="status" class="mt-4 text-center text-sm text-muted"></p><a href={Astro.url.pathname+Astro.url.search} id="reload-session" class="xl-text-link hidden mt-3">Atualizar sessão</a><p class="mt-5 hidden text-center text-xs text-muted sm:block">Espaço: mostrar resposta · 1 a 4: avaliar · O: ouvir</p></div>
+ <section id="fim" class="tool-card mt-6 hidden text-center" tabindex="-1"><h2 class="text-2xl font-semibold">Sessão concluída</h2><p class="mt-3 text-sm text-muted">Suas avaliações foram salvas. Os cartões voltam quando chegar a próxima revisão.</p><p id="next-review" class="mt-3 text-sm text-muted"></p><div class="xl-inline-actions justify-center mt-6"><a href="/" class="primary-button">Voltar ao painel</a><a href={Astro.url.pathname+Astro.url.search} class="secondary-button">Ver cartões disponíveis</a></div></section></>}
+ {!cartoes.length&&!erro&&<section class="tool-card xl-empty"><h2>Nenhum cartão pendente agora</h2><p>As palavras voltam nas datas definidas pelas suas avaliações. Novas entradas ficam disponíveis imediatamente.</p><div class="xl-inline-actions justify-center mt-6"><a href="/dicionario" class="primary-button">Abrir dicionário</a><a href="/" class="secondary-button">Voltar ao painel</a></div></section>}
+</div></AppLayout>
+<script>
+ import {falar} from '../scripts/falar';import {enviar} from '../scripts/ui';import {proximoIntervalo,rotuloIntervalo} from '../lib/revisao';import type {Palavra} from '../lib/estudo';
+ const $=(id:string)=>document.getElementById(id)!;
+ const cartoes:Palavra[]=JSON.parse($('dados').dataset.cartoes??'[]');
+ const buttons=Array.from(document.querySelectorAll<HTMLButtonElement>('.nota'));
+ let atual=0,mostrando=false,salvando=false,conflito=false;
+ let pending:{nota:number;request_id:string}|null=null;let proxima:string|null=null;
+ const progress=(n:number)=>{$('barra').style.width=`${n}%`;$('progresso').setAttribute('aria-valuenow',String(n))};
+ function render(){const c=cartoes[atual];$('contador').textContent=`Cartão ${atual+1} de ${cartoes.length}`;progress(Math.round(atual/cartoes.length*100));$('classe').textContent=c.classe;$('frente').textContent=c.texto;$('exemplo').textContent=c.exemplo;$('verso').textContent='';$('resposta').classList.add('hidden');$('acoes-nota').classList.add('hidden');$('acoes-mostrar').classList.remove('hidden');$('mostrar').setAttribute('aria-expanded','false');$('save-status').textContent='';$('reload-session').classList.add('hidden');mostrando=false;buttons.forEach(b=>{b.disabled=false;b.querySelector('[data-intervalo]')!.textContent=rotuloIntervalo(proximoIntervalo(c.repeticoes,c.intervalo_dias,Number(c.facilidade),Number(b.dataset.nota)).segundos)})}
+ function mostrar(){if(atual>=cartoes.length||mostrando||salvando)return;$('verso').textContent=cartoes[atual].traducao;$('resposta').classList.remove('hidden');$('acoes-nota').classList.remove('hidden');$('acoes-mostrar').classList.add('hidden');$('mostrar').setAttribute('aria-expanded','true');mostrando=true;buttons[0].focus({preventScroll:true})}
+ async function avaliar(nota:number){
+  if(!mostrando||salvando||conflito||atual>=cartoes.length||(pending&&pending.nota!==nota))return;
+  pending??={nota,request_id:crypto.randomUUID()};salvando=true;buttons.forEach(b=>b.disabled=true);$('save-status').textContent='Salvando avaliação…';
+  try{
+   const c=cartoes[atual];const result=await enviar('avaliar',{id:c.id,nota,versao:c.versao,request_id:pending.request_id});
+   if(!proxima||result.due_at<proxima)proxima=result.due_at;
+   pending=null;atual++;mostrando=false;
+   if(atual===cartoes.length){$('area').classList.add('hidden');$('fim').classList.remove('hidden');progress(100);$('contador').textContent='Concluído';if(proxima)$('next-review').textContent=`Próximo retorno desta sessão: ${new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short',timeZone:$('dados').dataset.timezone}).format(new Date(proxima))}.`;$('fim').focus({preventScroll:true})}
+   else{render();$('mostrar').focus({preventScroll:true})}
+  }catch(error){const e=error as Error&{conflito?:boolean};conflito=Boolean(e.conflito);$('save-status').textContent=e.message+(conflito?'':' Clique na mesma avaliação para tentar novamente.');$('reload-session').classList.remove('hidden');buttons.forEach(b=>b.disabled=conflito||Number(b.dataset.nota)!==pending?.nota)}
+  finally{salvando=false;}
+ }
+ function ouvir(){if(atual<cartoes.length)falar(cartoes[atual].texto,cartoes[atual].idioma)}
+ if(cartoes.length){$('mostrar').addEventListener('click',mostrar);$('ouvir').addEventListener('click',ouvir);buttons.forEach(b=>b.addEventListener('click',()=>void avaliar(Number(b.dataset.nota))));render();}
+ document.addEventListener('keydown',e=>{if(!cartoes.length||e.repeat||e.ctrlKey||e.metaKey||e.altKey||document.querySelector('dialog[open]'))return;const t=e.target;if(t instanceof HTMLElement&&t.closest('input,textarea,select,[contenteditable]:not([contenteditable="false"])'))return;if(e.code==='Space'&&!(t instanceof HTMLElement&&t.closest('button,a'))){e.preventDefault();mostrar()}else if(['1','2','3','4'].includes(e.key))void avaliar(Number(e.key));else if(e.key.toLowerCase()==='o')ouvir()});
+</script>

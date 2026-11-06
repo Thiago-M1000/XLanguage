@@ -9,12 +9,27 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "check": "astro check",
+    "test": "node --experimental-strip-types tests/database.mjs",
+    "start": "node ./dist/server/entry.mjs",
+    "test:smoke": "node tests/http.mjs"
   },
   "dependencies": {
-    "astro": "^7.3.7"
+    "@astrojs/node": "^11.1.11",
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.119.0",
+    "@tailwindcss/vite": "^4.3.4",
+    "astro": "^7.3.7",
+    "tailwindcss": "^4.3.4"
   },
   "allowScripts": {
     "esbuild": true
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.12",
+    "@electric-sql/pglite": "^0.5.15",
+    "@types/node": "^24.19.2",
+    "typescript": "^6.0.3"
   }
 }

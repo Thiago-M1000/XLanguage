@@ -1,0 +1,27 @@
+---
+import {IDIOMAS,idioma} from '../lib/idiomas';
+const perfil=Astro.locals.perfil;
+const atual=idioma(perfil.idioma_ativo);
+const disponiveis=IDIOMAS.filter(i=>perfil.idiomas.includes(i.codigo));
+---
+<div class="company-control xl-language-control"><div class="company-picker">
+ <button id="study-language-trigger" type="button" class="company-trigger" aria-expanded="false" aria-controls="study-language-menu" aria-label={`Idioma de estudo: ${atual.nome}`}><span class="xl-language-flag" aria-hidden="true">{atual.icone}</span><span>{atual.nome}</span><svg class="company-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg></button>
+ <div id="study-language-menu" class="company-menu" role="group" aria-label="Idiomas de estudo" hidden><p class="xl-picker-label">IDIOMA DE ESTUDO</p>{disponiveis.map(i=><button type="button" data-study-language={i.codigo} aria-pressed={i.codigo===atual.codigo}><span class="xl-language-flag" aria-hidden="true">{i.icone}</span><span>{i.nome}</span>{i.codigo===atual.codigo&&<span class="ml-auto text-accent" aria-hidden="true">✓</span>}</button>)}<a class="xl-picker-manage" href="/configuracoes#idiomas">Adicionar ou gerenciar idiomas</a><p id="language-feedback" role="alert" class="xl-picker-feedback"></p></div>
+</div></div>
+<script>
+ import {enviar} from '../scripts/ui';
+ const trigger=document.getElementById('study-language-trigger') as HTMLButtonElement;
+ const menu=document.getElementById('study-language-menu')!;
+ const options=Array.from(menu.querySelectorAll<HTMLButtonElement>('[data-study-language]'));
+ const setOpen=(open:boolean)=>{menu.hidden=!open;trigger.setAttribute('aria-expanded',String(open))};
+ trigger.addEventListener('click',()=>setOpen(Boolean(menu.hidden)));
+ trigger.addEventListener('keydown',e=>{if(e.key==='ArrowDown'){e.preventDefault();setOpen(true);options[0]?.focus()}});
+ menu.addEventListener('keydown',e=>{if(e.key==='Escape'){setOpen(false);trigger.focus()}if(['ArrowDown','ArrowUp'].includes(e.key)){e.preventDefault();const idx=options.indexOf(document.activeElement as HTMLButtonElement);options[(idx+(e.key==='ArrowDown'?1:-1)+options.length)%options.length]?.focus()}});
+ document.addEventListener('click',e=>{if(e.target instanceof Node&&!trigger.parentElement?.contains(e.target))setOpen(false)});
+ document.addEventListener('focusin',e=>{if(e.target instanceof Node&&!trigger.parentElement?.contains(e.target))setOpen(false)});
+ options.forEach(button=>button.addEventListener('click',async()=>{
+  options.forEach(b=>b.disabled=true);trigger.disabled=true;
+  try{await enviar('idioma',{idioma:button.dataset.studyLanguage});const url=new URL(location.href);url.searchParams.delete('baralho');url.searchParams.delete('pagina');url.searchParams.delete('q');location.assign(url.pathname+url.search)}
+  catch(error){document.getElementById('language-feedback')!.textContent=(error as Error).message;options.forEach(b=>b.disabled=false);trigger.disabled=false;}
+ }));
+</script>

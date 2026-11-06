@@ -1,0 +1,52 @@
+---
+import Layout from "../layouts/Layout.astro";
+import ThemeToggle from "../components/ThemeToggle.astro";
+const erro = Astro.url.searchParams.has("erro");
+// Opcional: coloque sua mídia em public/ e informe o caminho.
+// Ex.: { tipo: "video", arquivo: "/login.mp4", posicao: "center" }.
+// Vazio: usa um painel escuro, sem depender de arquivos externos.
+const midia: { tipo: "imagem" | "video"; arquivo: string; posicao: string } = {
+  tipo: "imagem", arquivo: "", posicao: "center",
+};
+---
+<Layout title="Entrar · XLanguage">
+  <main class="xl-login">
+    <section class="xl-login-column" aria-labelledby="login-title">
+      <div class="xl-login-theme"><ThemeToggle compact /></div>
+      <div class="xl-login-content"><h1 id="login-title">Entrar em sua conta</h1><p>Continue seus estudos de onde parou.</p>
+        <form method="post" action="/api/login" class="xl-login-form">
+          {erro && <p role="alert" class="xl-error">E-mail ou senha incorretos. Confira os dados e tente de novo.</p>}
+          <div class="xl-field"><label for="email">Email</label><input id="email" name="email" type="email" autocomplete="email" required placeholder="Digite seu email" /></div>
+          <div class="xl-field"><label for="senha">Senha</label><div class="xl-password"><input id="senha" name="senha" type="password" autocomplete="current-password" required placeholder="Digite sua senha" /><button type="button" id="toggle-senha" aria-pressed="false" aria-controls="senha" aria-label="Mostrar senha">Mostrar</button></div></div>
+          <button type="submit" class="xl-primary">Entrar</button>
+        </form>
+        <a href="/recuperar-senha" class="xl-auth-link">Esqueceu sua senha?</a>
+      </div>
+    </section>
+    <aside class="xl-login-visual" aria-label="XLanguage">
+      {midia.arquivo && (midia.tipo === "video" ? <video id="login-video" class="xl-login-media" style={{ objectPosition: midia.posicao }} muted loop playsinline preload="metadata" aria-hidden="true"><source src={midia.arquivo} /></video> : <img class="xl-login-media" src={midia.arquivo} style={{ objectPosition: midia.posicao }} alt="" />)}
+      <div class="xl-login-shade"></div><span class="xl-login-wordmark">XLanguage</span><div class="xl-login-copy"><small>UM POUCO, TODOS OS DIAS.</small><h2>Palavras que ficam.<br />Um idioma que avança.</h2><p>Aprenda vocabulário, ouça a pronúncia e encontre seu ritmo de estudo.</p>{midia.arquivo && midia.tipo === "video" && <button type="button" id="video-toggle" class="mt-6 rounded-md border border-white/40 px-3 py-2 text-sm text-white" aria-controls="login-video" aria-pressed="false">Reproduzir vídeo</button>}</div>
+    </aside>
+  </main>
+</Layout>
+<script>
+  const input = document.getElementById("senha") as HTMLInputElement;
+  const toggle = document.getElementById("toggle-senha") as HTMLButtonElement;
+  toggle.addEventListener("click", () => {
+    const show = input.type === "password";
+    input.type = show ? "text" : "password";
+    toggle.textContent = show ? "Ocultar" : "Mostrar";
+    toggle.setAttribute("aria-label", show ? "Ocultar senha" : "Mostrar senha");
+    toggle.setAttribute("aria-pressed", String(show));
+  });
+  const video = document.getElementById("login-video") as HTMLVideoElement | null;
+  const videoButton = document.getElementById("video-toggle") as HTMLButtonElement | null;
+  if (video && videoButton) {
+    const sync = () => {
+      videoButton.textContent = video.paused ? "Reproduzir vídeo" : "Pausar vídeo";
+      videoButton.setAttribute("aria-pressed", String(!video.paused));
+    };
+    videoButton.addEventListener("click", () => { if (video.paused) void video.play().catch(sync); else video.pause(); });
+    video.addEventListener("play", sync); video.addEventListener("pause", sync);
+  }
+</script>

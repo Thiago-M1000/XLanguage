@@ -1,43 +1,47 @@
-# Astro Starter Kit: Minimal
+# XLanguage
+
+App de estudo com Astro, Tailwind e Supabase: dicionário, baralhos, repetição espaçada, idiomas e progresso. O dashboard e os temas usam os arquivos visuais de `xlanguage-app.zip`.
+
+## Rodar localmente
+
+Use Node 22.12+ (Node 24 recomendado).
 
 ```sh
-npm create astro@latest -- --template minimal
+npm ci
 ```
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+Copie `.env.example` para `.env` e preencha `PUBLIC_SUPABASE_URL` e `PUBLIC_SUPABASE_PUBLISHABLE_KEY` do Supabase correto. Use somente a chave pública, nunca `service_role`. Não envie `.env` ao GitHub.
 
-## 🚀 Project Structure
-
-Inside of your Astro project, you'll see the following folders and files:
-
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
+```sh
+npm run dev -- --host
 ```
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+`PUBLIC_SITE_URL` deve ser a origem pela qual você acessa o app. Por exemplo, se usa `http://192.168.1.6:4321`, coloque esse valor no `.env`. Cadastre também `http://192.168.1.6:4321/auth/callback` nas Redirect URLs do Supabase. Em produção, use a URL HTTPS correspondente. A recuperação precisa ser concluída no mesmo navegador em que foi solicitada.
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
+## Banco
 
-Any static assets, like images, can be placed in the `public/` directory.
+O SQL `001_xlanguage.sql` já foi executado no Supabase correto. Não é necessário executá-lo para atualizar os arquivos do app. O `002_importar_palavras_antigas.sql` foi pulado e continua opcional: nenhuma importação de dados antigos ocorre automaticamente. Também é possível importar pelo Dicionário.
 
-## 🧞 Commands
+## Validação
 
-All commands are run from the root of the project, from a terminal:
+```sh
+npm run check
+npm test
+npm run test:smoke
+npm run build
+```
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
+`npm test` usa PostgreSQL local em memória: valida isolamento entre contas, notas, conflitos, importação e estatísticas. Executa ambos os SQLs apenas nesse banco descartável, sem acessar o Supabase real. `test:smoke` compila e testa as rotas com um serviço Supabase simulado localmente; as credenciais de teste não são usadas em produção. Rode `npm run build` novamente com seu `.env` antes de publicar.
 
-## 👀 Want to learn more?
+## Servidor
 
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+O repositório original estava no modo estático, sem adaptador. Esta atualização configura SSR com `@astrojs/node` em modo standalone para suportar autenticação por cookies e APIs.
+
+```sh
+npm run build
+npm start
+```
+
+O build depende das variáveis do `.env`. O resultado precisa de um servidor Node; não é um site de arquivos estáticos. Para Cloudflare Workers, configure o adaptador Cloudflare antes da publicação. Esta atualização não publica o app.
+
+Detalhes dos recursos e do agendamento: [LEIA-ME.md](./LEIA-ME.md).
