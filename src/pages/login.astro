@@ -1,7 +1,9 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import ThemeToggle from "../components/ThemeToggle.astro";
-const erro = Astro.url.searchParams.has("erro");
+import {ERROS_LOGIN} from '../lib/auth';
+const codigoErro = Astro.url.searchParams.get('erro');
+const erro = codigoErro === null ? '' : (Object.hasOwn(ERROS_LOGIN,codigoErro) ? ERROS_LOGIN[codigoErro] : ERROS_LOGIN.conexao);
 // Opcional: coloque sua mídia em public/ e informe o caminho.
 // Ex.: { tipo: "video", arquivo: "/login.mp4", posicao: "center" }.
 // Vazio: usa um painel escuro, sem depender de arquivos externos.
@@ -15,7 +17,7 @@ const midia: { tipo: "imagem" | "video"; arquivo: string; posicao: string } = {
       <div class="xl-login-theme"><ThemeToggle compact /></div>
       <div class="xl-login-content"><h1 id="login-title">Entrar em sua conta</h1><p>Continue seus estudos de onde parou.</p>
         <form method="post" action="/api/login" class="xl-login-form">
-          {erro && <p role="alert" class="xl-error">E-mail ou senha incorretos. Confira os dados e tente de novo.</p>}
+          {erro && <p role="alert" class="xl-error">{erro}</p>}
           <div class="xl-field"><label for="email">Email</label><input id="email" name="email" type="email" autocomplete="email" required placeholder="Digite seu email" /></div>
           <div class="xl-field"><label for="senha">Senha</label><div class="xl-password"><input id="senha" name="senha" type="password" autocomplete="current-password" required placeholder="Digite sua senha" /><button type="button" id="toggle-senha" aria-pressed="false" aria-controls="senha" aria-label="Mostrar senha">Mostrar</button></div></div>
           <button type="submit" class="xl-primary">Entrar</button>

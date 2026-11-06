@@ -1,0 +1,80 @@
+import assert from 'node:assert/strict';
+import {mkdir} from 'node:fs/promises';
+import {chromium} from 'playwright';
+import {user,profile} from './fixtures.mjs';
+
+export async function testBrowser(origin){
+ profile.idioma_ativo='en-US';
+ const browser=await chromium.launch({headless:true,...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,args:['--no-sandbox','--single-process','--no-zygote','--disable-dev-shm-usage','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']}: {})});
+ const context=await browser.newContext({viewport:{width:1440,height:1000},colorScheme:'light'});
+ // Fontes remotas não fazem parte da validação funcional nem exigem acesso externo.
+ await context.route('https://fonts.googleapis.com/**',route=>route.abort());
+ await context.route('https://fonts.gstatic.com/**',route=>route.abort());
+ const page=await context.newPage();page.setDefaultTimeout(10000);
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ const saved=async action=>{await Promise.all([page.waitForEvent('load'),action()]);};
+ const noOverflow=async()=>assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`Sem overflow horizontal: ${page.url()}`);
+ try{
+  await page.goto(origin+'/login');
+  await page.locator('#email').fill('wrong@example.test');await page.locator('#senha').fill('wrong-password');
+  await saved(()=>page.getByRole('button',{name:'Entrar',exact:true}).click());
+  assert.match(await page.getByRole('alert').textContent(),/E-mail ou senha incorretos/);
+  await page.locator('#email').fill('key@example.test');await page.locator('#senha').fill('wrong-password');
+  await saved(()=>page.getByRole('button',{name:'Entrar',exact:true}).click());
+  assert.match(await page.getByRole('alert').textContent(),/configuração de acesso/);
+  await page.locator('#email').fill(user.email);await page.locator('#senha').fill('correct-password');
+  await page.locator('#toggle-senha').click();assert.equal(await page.locator('#senha').getAttribute('type'),'text');
+  await saved(()=>page.getByRole('button',{name:'Entrar',exact:true}).click());
+  assert.equal(new URL(page.url()).pathname,'/');assert.equal(await page.locator('.metric-card').count(),4);await noOverflow();
+  await mkdir('test-results',{recursive:true});
+  await page.screenshot({path:'test-results/dashboard-desktop.png',fullPage:true});
+  await page.locator('.sidebar .theme-toggle').click();assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');
+  await page.reload();assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');
+  await page.screenshot({path:'test-results/dashboard-dark.png',fullPage:true});
+  await page.locator('.sidebar .theme-toggle').click();
+  await page.goto(origin+'/dicionario');
+  await page.getByRole('button',{name:'Nova entrada',exact:true}).click();
+  await page.locator('#f-texto').fill('browser-word');await page.locator('#f-traducao').fill('palavra do navegador');
+  await page.locator('#f-etiquetas').fill('teste, navegador');await page.locator('#f-exemplo').fill('A browser test.');
+  await saved(()=>page.getByRole('button',{name:'Salvar entrada'}).click());
+  let row=page.locator('.xl-word-row').filter({has:page.getByRole('heading',{name:'browser-word',exact:true})});
+  await row.waitFor();assert.match(await row.textContent(),/palavra do navegador/);
+  await row.getByRole('button',{name:'Editar',exact:true}).click();
+  await page.locator('#f-traducao').fill('tradução editada');await saved(()=>page.getByRole('button',{name:'Salvar entrada'}).click());
+  row=page.locator('.xl-word-row').filter({has:page.getByRole('heading',{name:'browser-word',exact:true})});assert.match(await row.textContent(),/tradução editada/);
+  await row.getByRole('button',{name:'Excluir',exact:true}).click();
+  await page.locator('#confirmar-exclusao').getByRole('button',{name:'Cancelar',exact:true}).click();assert.equal(await row.count(),1);
+  await row.getByRole('button',{name:'Excluir',exact:true}).click();await saved(()=>page.locator('[data-confirm-delete]').click());
+  assert.equal(await page.getByRole('heading',{name:'browser-word',exact:true}).count(),0);
+  await page.getByRole('button',{name:'Importar palavras',exact:true}).click();await page.locator('#bulk-entries').fill('browser-import\timportação pelo navegador');
+  await saved(()=>page.locator('#importar-dialog').getByRole('button',{name:'Importar',exact:true}).click());
+  await page.getByRole('heading',{name:'browser-import',exact:true}).waitFor();
+  await page.goto(origin+'/baralhos');await page.getByRole('button',{name:'Novo baralho',exact:true}).click();
+  await page.locator('#deck-name').fill('Baralho do navegador');await page.locator('#deck-description').fill('Criado pelo formulário');
+  await saved(()=>page.getByRole('button',{name:'Salvar baralho'}).click());
+  const card=page.locator('.xl-live-deck').filter({has:page.getByRole('heading',{name:'Baralho do navegador',exact:true})});await card.waitFor();
+  await card.getByRole('button',{name:'Editar',exact:true}).click();await page.locator('#deck-name').fill('Baralho editado');
+  await saved(()=>page.getByRole('button',{name:'Salvar baralho'}).click());
+  const edited=page.locator('.xl-live-deck').filter({has:page.getByRole('heading',{name:'Baralho editado',exact:true})});
+  await edited.getByRole('button',{name:'Excluir',exact:true}).click();await saved(()=>page.locator('[data-confirm-delete]').click());assert.equal(await edited.count(),0);
+  await page.goto(origin+'/revisao');await page.getByRole('button',{name:'Mostrar resposta',exact:true}).click();
+  assert.equal(await page.locator('#resposta').isVisible(),true);
+  await page.locator('[data-nota="3"]').click();await page.waitForFunction(()=>!document.querySelector('[data-nota="3"]')?.disabled||!document.querySelector('#fim')?.classList.contains('hidden'));
+  await page.goto(origin+'/configuracoes');await page.locator('#profile-goal').fill('25');
+  await saved(()=>page.getByRole('button',{name:'Salvar preferências'}).click());assert.equal(await page.locator('#profile-goal').inputValue(),'25');
+  await page.goto(origin+'/');await page.locator('#study-language-trigger').click();
+  await saved(()=>page.locator('[data-study-language="es-ES"]').click());assert.match(await page.locator('#study-language-trigger').textContent(),/Espanhol/);
+  await page.setViewportSize({width:390,height:844});await noOverflow();
+  await page.locator('#open-mobile-menu').click();assert.equal(await page.locator('#mobile-menu-dialog').isVisible(),true);
+  await page.locator('#close-mobile-menu').click();assert.equal(await page.locator('#mobile-menu-dialog').isVisible(),false);
+  await page.screenshot({path:'test-results/dashboard-mobile.png',fullPage:true});
+  await page.goto(origin+'/dicionario');await noOverflow();await page.getByRole('button',{name:'Nova entrada',exact:true}).click();
+  await noOverflow();await page.locator('#palavra-dialog [data-close]').first().click();
+  await page.locator('#open-mobile-menu').click();
+  await saved(()=>page.locator('#mobile-menu-dialog').getByRole('button',{name:'Sair da conta'}).click());assert.equal(new URL(page.url()).pathname,'/login');
+  await page.goto(origin+'/');assert.equal(new URL(page.url()).pathname,'/login');
+  assert.deepEqual(errors,[],'Nenhum erro de JavaScript no navegador');
+  console.log('PASS: navegador desktop/mobile, login, cookies, temas, criar/editar/excluir palavras e baralhos, importação, revisão, preferências, idiomas, menu e logout.');
+ }catch(error){await mkdir('test-results',{recursive:true});await page.screenshot({path:'test-results/failure.png',fullPage:true});throw error;}
+ finally{await context.close();await browser.close();}
+}

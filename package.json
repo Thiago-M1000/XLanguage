@@ -13,7 +13,8 @@
     "check": "astro check",
     "test": "node --experimental-strip-types tests/database.mjs",
     "start": "node ./dist/server/entry.mjs",
-    "test:smoke": "node tests/http.mjs"
+    "test:smoke": "node tests/http.mjs",
+    "test:browser": "node tests/http.mjs --browser"
   },
   "dependencies": {
     "@astrojs/node": "^11.1.11",
@@ -30,6 +31,7 @@
     "@astrojs/check": "^0.9.12",
     "@electric-sql/pglite": "^0.5.15",
     "@types/node": "^24.19.2",
+    "playwright": "^1.65.0",
     "typescript": "^6.0.3"
   }
 }

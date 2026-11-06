@@ -10,6 +10,8 @@ Use Node 22.12+ (Node 24 recomendado).
 npm ci
 ```
 
+Para apenas abrir o app sem instalar as ferramentas de teste, use `npm ci --omit=dev --no-audit --no-fund`. Os testes automatizados ficam no GitHub; você não precisa instalá-los no seu computador para estudar.
+
 Copie `.env.example` para `.env` e preencha `PUBLIC_SUPABASE_URL` e `PUBLIC_SUPABASE_PUBLISHABLE_KEY` do Supabase correto. Use somente a chave pública, nunca `service_role`. Não envie `.env` ao GitHub.
 
 ```sh
@@ -32,6 +34,19 @@ npm run build
 ```
 
 `npm test` usa PostgreSQL local em memória: valida isolamento entre contas, notas, conflitos, importação e estatísticas. Executa ambos os SQLs apenas nesse banco descartável, sem acessar o Supabase real. `test:smoke` compila e testa as rotas com um serviço Supabase simulado localmente; as credenciais de teste não são usadas em produção. Rode `npm run build` novamente com seu `.env` antes de publicar.
+
+Cada push e pull request executa `.github/workflows/validate.yml` com checagem de tipos, banco PostgreSQL descartável e Chromium. O teste de navegador usa os formulários reais para login, cookies, palavras, importação, baralhos, revisão, idiomas, preferências e saída, além de conferir temas e menu mobile. As capturas desktop/mobile ficam no artefato `xlanguage-browser` por sete dias, apenas com os dados fictícios dos testes.
+
+Para rodar o navegador localmente (opcional):
+
+```sh
+npx playwright install chromium
+npm run test:browser
+```
+
+Nenhum teste automatizado usa a sua senha, envia email real ou modifica o Supabase de produção. A integração com o Supabase real e o envio de email precisam de uma instância de teste acessível e uma conta própria de teste; os testes simulados não comprovam a configuração desse ambiente.
+
+O login distingue credenciais inválidas, configuração de API inválida, email não confirmado, limite de tentativas e indisponibilidade do serviço. Os logs registram só a categoria da falha e o status, sem senha ou chaves.
 
 ## Servidor
 

@@ -1,0 +1,41 @@
+name: Validar XLanguage
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  ASTRO_TELEMETRY_DISABLED: '1'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Instalar dependências
+        run: npm ci --no-audit --no-fund
+      - name: Checar tipos
+        run: npm run check
+      - name: Testar PostgreSQL descartável
+        run: npm test
+      - name: Instalar Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Testar HTTP e navegador sem credenciais reais
+        run: npm run test:browser
+      - name: Guardar evidências visuais
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xlanguage-browser
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7
