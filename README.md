@@ -48,15 +48,49 @@ Nenhum teste automatizado usa a sua senha, envia email real ou modifica o Supaba
 
 O login distingue credenciais inválidas, configuração de API inválida, email não confirmado, limite de tentativas e indisponibilidade do serviço. Os logs registram só a categoria da falha e o status, sem senha ou chaves.
 
-## Servidor
+## Servidor local e testes
 
-O repositório original estava no modo estático, sem adaptador. Esta atualização configura SSR com `@astrojs/node` em modo standalone para suportar autenticação por cookies e APIs.
+O desenvolvimento local e os testes usam SSR com `@astrojs/node`. A publicação usa `@astrojs/cloudflare`, selecionado pelos comandos abaixo. A autenticação continua usando cookies do Supabase, sem precisar de KV para sessões do Astro.
 
 ```sh
 npm run build
 npm start
 ```
 
-O build depende das variáveis do `.env`. O resultado precisa de um servidor Node; não é um site de arquivos estáticos. Para Cloudflare Workers, configure o adaptador Cloudflare antes da publicação. Esta atualização não publica o app.
+O comando `npm run build` produz um servidor Node. O app não funciona como um upload de arquivos estáticos.
+
+## Publicar na sua Cloudflare
+
+O repositório já inclui o adaptador, `wrangler.jsonc` e os comandos de publicação. O Worker se chama `xlanguage`; antes da primeira publicação, confira se esse nome está livre ou pertence a este app na conta selecionada.
+
+Para conectar o GitHub no painel da Cloudflare Workers Builds:
+
+| Campo | Valor |
+| --- | --- |
+| Repositório | `Thiago-M1000/XLanguage` |
+| Branch | `master` |
+| Build command | `npm run build:cloudflare` |
+| Deploy command | `npx wrangler deploy` |
+| Root directory | raiz do repositório |
+
+Instale também as dependências de desenvolvimento no ambiente de build (não use `--omit=dev` na Cloudflare). O adaptador e o Wrangler são ferramentas de publicação; não são necessários para abrir o app localmente em modo Node.
+
+Em **Worker → Settings → Variables and Secrets**, configure os valores do Supabase correto:
+
+| Nome | Valor |
+| --- | --- |
+| `PUBLIC_SUPABASE_URL` | Project URL do mesmo Supabase onde o SQL 001 já foi aplicado |
+| `PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Publishable key desse projeto; nunca `service_role` ou `sb_secret_...` |
+| `PUBLIC_SITE_URL` | URL HTTPS efetivamente atribuída ao Worker, sem caminho |
+
+Esses valores são lidos no runtime; não precisam ser adicionados ao código nem ao GitHub. `keep_vars` preserva as variáveis gerenciadas no painel durante as atualizações. Cadastre a URL efetiva do app e sua rota `/auth/callback` no Supabase em **Authentication → URL Configuration**. Mantenha também a Redirect URL local se continuar usando o app no computador.
+
+Para publicar manualmente de um terminal já autenticado na conta correta:
+
+```sh
+npm run deploy:cloudflare
+```
+
+O comando compila e publica de verdade; o build isolado `npm run build:cloudflare` apenas verifica a compilação. As dependências são locais ao projeto e não trocam o Node global do computador.
 
 Detalhes dos recursos e do agendamento: [LEIA-ME.md](./LEIA-ME.md).

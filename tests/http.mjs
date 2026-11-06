@@ -13,10 +13,11 @@ const probe=createServer();probe.listen(0,'127.0.0.1');await once(probe,'listeni
 const port=probe.address().port;await new Promise(resolve=>probe.close(resolve));
 const origin=`http://127.0.0.1:${port}`;
 const env={...process.env,ASTRO_TELEMETRY_DISABLED:'1',PUBLIC_SUPABASE_URL:supabaseUrl,PUBLIC_SUPABASE_PUBLISHABLE_KEY:'local-test-public-key',PUBLIC_SITE_URL:origin,HOST:'127.0.0.1',PORT:String(port)};
-const run=(command,args)=>new Promise((resolve,reject)=>{const p=spawn(command,args,{env,stdio:'inherit'});p.on('error',reject);p.on('exit',code=>code===0?resolve():reject(new Error(`${command} exited ${code}`)));});
+const run=(command,args,runEnv=env)=>new Promise((resolve,reject)=>{const p=spawn(command,args,{env:runEnv,stdio:'inherit'});p.on('error',reject);p.on('exit',code=>code===0?resolve():reject(new Error(`${command} exited ${code}`)));});
 let app;
 try{
- await run(process.execPath,['node_modules/astro/bin/astro.mjs','build']);
+ // Confirma que a configuração pode ser adicionada só no runtime, depois do build.
+ await run(process.execPath,['node_modules/astro/bin/astro.mjs','build'],{...env,PUBLIC_SUPABASE_URL:'',PUBLIC_SUPABASE_PUBLISHABLE_KEY:'',PUBLIC_SITE_URL:''});
  app=spawn(process.execPath,['dist/server/entry.mjs'],{env,stdio:'inherit'});
  let ready=false;
  for(let i=0;i<100;i++){try{await fetch(`${origin}/login`);ready=true;break;}catch{await delay(100);}}

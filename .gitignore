@@ -29,3 +29,8 @@ pnpm-debug.log*
 # Testes de navegador
 test-results/
 playwright-report/
+
+# Estado local da Cloudflare e variáveis de desenvolvimento
+.wrangler/
+.dev.vars
+.dev.vars.*
