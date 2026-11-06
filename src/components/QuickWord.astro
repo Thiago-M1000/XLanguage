@@ -1,0 +1,15 @@
+---
+import type {Baralho} from '../lib/estudo';
+const {baralhos=[],baralho=null}=Astro.props as {baralhos:Baralho[];baralho:string|null};
+const aberto=Astro.url.searchParams.has('rapido');
+---
+<details id="cadastro-rapido" class="tool-card xl-quick-word" open={aberto}>
+ <summary><span>Adicionar rápido</span><span class="xl-help">Só a palavra e a tradução para começar</span></summary>
+ <form data-api="palavra" data-quick-word class="xl-stack mt-5">
+ <input type="hidden" name="idioma" value={Astro.locals.perfil.idioma_ativo}/>
+ <div class="xl-form-grid"><div class="xl-field"><label for="quick-texto">Palavra ou frase</label><input id="quick-texto" name="texto" required maxlength="500" autocomplete="off" placeholder="Palavra que você encontrou"/></div><div class="xl-field"><label for="quick-traducao">Tradução</label><input id="quick-traducao" name="traducao" required maxlength="1000" placeholder="O que significa"/></div></div>
+ {baralhos.length>0&&<div class="xl-field"><label for="quick-deck">Baralho (opcional)</label><select id="quick-deck" name="baralhos"><option value="">Somente no dicionário</option>{baralhos.map(b=><option value={b.id} selected={b.id===baralho}>{b.nome}</option>)}</select></div>}
+ <p data-feedback class="xl-error empty:hidden" role="status"></p><button type="submit" class="primary-button">Salvar palavra</button>
+ {Astro.url.searchParams.has('salva')&&<p role="status" class="xl-success">Palavra salva. Você já pode adicionar a próxima.</p>}
+ </form>
+</details>

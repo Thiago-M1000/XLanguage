@@ -1,5 +1,7 @@
 ---
+import {iaDisponivel} from '../lib/ia';
 import type {Baralho} from '../lib/estudo';
+const aiAtiva=iaDisponivel(Astro.locals.user!.id);
 const {baralhos=[]}=Astro.props as {baralhos:Baralho[]};
 ---
 <dialog id="palavra-dialog" class="xl-dialog" aria-labelledby="palavra-titulo"><form id="palavra-form" class="xl-modal-content xl-stack" data-api="palavra">
@@ -7,8 +9,32 @@ const {baralhos=[]}=Astro.props as {baralhos:Baralho[]};
  <input type="hidden" name="id" value=""/><input type="hidden" name="idioma" value={Astro.locals.perfil.idioma_ativo}/>
  <div class="xl-field"><label for="f-texto">Palavra ou frase</label><input id="f-texto" name="texto" required maxlength="500" placeholder="Ex.: deadline"/></div>
  <div class="xl-field"><label for="f-traducao">Tradução</label><input id="f-traducao" name="traducao" required maxlength="1000" placeholder="Ex.: prazo"/></div>
+ <div class="xl-ai-tools"><button type="button" id="sugerir-ia" class="secondary-button" disabled={!aiAtiva}>Sugerir tradução e exemplo com IA</button><p class="xl-help">{aiAtiva?'Envia somente a palavra e o idioma à OpenAI. Revise a sugestão antes de aplicar; nada é salvo automaticamente.':'Sugestões de IA ainda não estão ativadas para esta conta.'}</p><p id="ia-status" role="status" class="xl-help"></p><div id="ia-preview" class="xl-ai-preview" hidden><strong>Sugestão para conferir</strong><p id="ia-traducao"></p><p id="ia-exemplo"></p><p id="ia-classe" class="xl-help"></p><div class="xl-inline-actions mt-3"><button type="button" id="ia-aplicar" class="primary-button">Aplicar ao formulário</button><button type="button" id="ia-descartar" class="secondary-button">Descartar</button></div></div></div>
  <div class="xl-form-grid"><div class="xl-field"><label for="f-classe">Tipo</label><select id="f-classe" name="classe"><option>expressão</option><option>verbo</option><option>substantivo</option><option>adjetivo</option><option>advérbio</option><option>frase</option></select></div><div class="xl-field"><label for="f-etiquetas">Etiquetas</label><input id="f-etiquetas" name="etiquetas" maxlength="1000" placeholder="trabalho, viagem"/></div></div>
  <div class="xl-field"><label for="f-exemplo">Frase de exemplo</label><textarea id="f-exemplo" name="exemplo" maxlength="2000" rows="3" placeholder="Uma frase para lembrar o contexto."></textarea></div>
  <fieldset class="xl-check-group"><legend>Baralhos</legend>{baralhos.length?baralhos.map(b=><label><input type="checkbox" name="baralhos" value={b.id}/><span>{b.nome}</span></label>):<p class="text-sm text-muted">Crie um baralho para organizar suas palavras. A entrada também pode ficar só no dicionário.</p>}</fieldset>
  <p data-feedback role="alert" class="xl-error empty:hidden"></p><div class="xl-form-actions"><button type="button" class="secondary-button" data-close>Cancelar</button><button type="submit" class="primary-button">Salvar entrada</button></div>
 </form></dialog>
+
+<script>
+ const trigger=document.getElementById('sugerir-ia') as HTMLButtonElement;
+ const preview=document.getElementById('ia-preview')!;const status=document.getElementById('ia-status')!;
+ const form=document.getElementById('palavra-form') as HTMLFormElement;
+ let sugestao:{traducao:string;exemplo:string;classe:string}|null=null,termo='',pedido=0;
+ const reset=()=>{pedido++;sugestao=null;preview.hidden=true;status.textContent='';};
+ form.addEventListener('reset',reset);
+ (document.getElementById('f-texto') as HTMLInputElement).addEventListener('input',reset);
+ trigger.addEventListener('click',async()=>{
+  const texto=(document.getElementById('f-texto') as HTMLInputElement).value.trim();
+  if(!texto){status.textContent='Escreva primeiro a palavra ou frase.';return;}
+  const id=++pedido;trigger.disabled=true;status.textContent='Gerando sugestão…';preview.hidden=true;
+  try{
+   const response=await fetch('/api/sugerir',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({texto,idioma:(form.elements.namedItem('idioma') as HTMLInputElement).value})});
+   const data=await response.json();if(!response.ok)throw new Error(data.erro??'Não foi possível gerar.');if(id!==pedido)return;
+   sugestao=data.sugestao;termo=texto;document.getElementById('ia-traducao')!.textContent=sugestao!.traducao;document.getElementById('ia-exemplo')!.textContent=sugestao!.exemplo;document.getElementById('ia-classe')!.textContent=sugestao!.classe;preview.hidden=false;status.textContent='Confira a sugestão antes de aplicar.';
+  }catch(error){if(id===pedido)status.textContent=error instanceof Error?error.message:'Não foi possível gerar.';}
+  finally{trigger.disabled=false;}
+ });
+ document.getElementById('ia-aplicar')!.addEventListener('click',()=>{if(!sugestao||(document.getElementById('f-texto') as HTMLInputElement).value.trim()!==termo)return;for(const key of ['traducao','exemplo','classe'] as const)(form.elements.namedItem(key) as HTMLInputElement).value=sugestao[key];reset();status.textContent='Sugestão aplicada. Revise e clique em Salvar entrada.';});
+ document.getElementById('ia-descartar')!.addEventListener('click',reset);
+</script>

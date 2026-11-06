@@ -1,5 +1,6 @@
 ---
 import AppLayout from '../layouts/AppLayout.astro';
+import QuickWord from '../components/QuickWord.astro';
 import WordForm from '../components/WordForm.astro';
 import ConfirmDelete from '../components/ConfirmDelete.astro';
 import {rpc,mensagemErro,uuid,type Palavra,type Baralho} from '../lib/estudo';
@@ -15,6 +16,8 @@ const linkPagina=(n:number)=>{const url=new URL(Astro.url);url.searchParams.set(
 <AppLayout title="Dicionário" active="dicionario">
  <div slot="actions" class="xl-inline-actions"><button type="button" data-open="importar-dialog" class="secondary-button">Importar palavras</button><button type="button" data-open="palavra-dialog" data-new-word class="primary-button">Nova entrada</button></div>
  {erro&&<p role="alert" class="xl-error">{erro}</p>}
+ <QuickWord baralhos={baralhos} baralho={filtro}/>
+ <div class="xl-home-links"><a class="secondary-button" href="/dificuldades">Palavras em dificuldade</a><a class="secondary-button" href="/progresso">Ver progresso</a></div>
  <section class="contacts-panel xl-dictionary-panel"><div class="contacts-heading"><div><h2>Seu vocabulário em {idioma(language).nome.toLowerCase()}</h2><p>{total} {total===1?'entrada encontrada':'entradas encontradas'}</p></div></div>
  <form method="get" class="xl-search-toolbar"><label class="search-field"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><input type="search" name="q" value={busca} maxlength="200" aria-label="Buscar palavra ou tradução" placeholder="Buscar palavra ou tradução…"/></label><select name="baralho" aria-label="Filtrar por baralho"><option value="">Todos os baralhos</option>{baralhos.map(b=><option value={b.id} selected={b.id===filtro}>{b.nome}</option>)}</select><button type="submit" class="secondary-button">Buscar</button></form>
  <ul class="leads-list">{entradas.map(e=><li class="lead-row xl-word-row"><div class="lead-identity"><button type="button" class="xl-audio" data-speak={e.texto} data-lang={e.idioma} aria-label={`Ouvir ${e.texto}`}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="m11 5-6 4H2v6h3l6 4zM15 8a6 6 0 0 1 0 8M18 5a10 10 0 0 1 0 14"/></svg></button><div class="lead-details"><div class="xl-word-title"><h3>{e.texto}</h3><span class="xl-small-label">{e.classe}</span></div><p class="xl-word-translation">{e.traducao}</p>{e.exemplo&&<p class="xl-word-example">{e.exemplo}</p>}<div class="xl-tags">{e.etiquetas.map(t=><span>{t}</span>)}{(e.baralhos??[]).map(id=><span>{baralhos.find(b=>b.id===id)?.nome}</span>)}</div></div></div><div class="lead-actions"><button type="button" class="edit-button" data-word-edit={JSON.stringify(e)}>Editar</button><button type="button" class="edit-button xl-delete-text" data-delete-action="excluir-palavra" data-id={e.id} data-name={e.texto}>Excluir</button></div></li>)}</ul>

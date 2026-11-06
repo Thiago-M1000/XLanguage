@@ -15,14 +15,14 @@ export function iniciarUI(){
   const original=submit.textContent;submit.disabled=true;submit.textContent='Salvando…';status.textContent='';
   try{
    const fields=new FormData(form);const body:Record<string,unknown>=Object.fromEntries(fields);
-   if(form.dataset.api==='palavra')body.baralhos=fields.getAll('baralhos');
+   if(form.dataset.api==='palavra')body.baralhos=fields.getAll('baralhos').filter(Boolean);
    if(form.dataset.api==='preferencias')body.idiomas=fields.getAll('idiomas');
    const result=await enviar(form.dataset.api!,body);
    if(form.dataset.api==='importar'){
     status.textContent=`${result.inseridas} adicionadas; ${result.duplicadas} duplicadas ignoradas. Atualizando…`;
     status.classList.remove('xl-error');
     setTimeout(()=>location.reload(),1200);
-   }else location.reload();
+   }else if(form.hasAttribute('data-quick-word')){const url=new URL(location.href);url.searchParams.set('rapido','1');url.searchParams.set('salva','1');url.hash='cadastro-rapido';location.assign(url.pathname+url.search+url.hash);}else location.reload();
   }catch(error){status.textContent=error instanceof Error?error.message:'Não foi possível salvar.';}
   finally{submit.disabled=false;submit.textContent=original;}
  }));

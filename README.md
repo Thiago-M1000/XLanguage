@@ -94,3 +94,32 @@ npm run deploy:cloudflare
 O comando compila e publica de verdade; o build isolado `npm run build:cloudflare` apenas verifica a compilação. As dependências são locais ao projeto e não trocam o Node global do computador.
 
 Detalhes dos recursos e do agendamento: [LEIA-ME.md](./LEIA-ME.md).
+
+
+## Prática e acompanhamento
+
+- A revisão oferece **Cartões**, **Digitar resposta** e **Frases com lacunas**. Os três modos compartilham a mesma fila e o agendamento existente. Você confere a resposta e escolhe a nota; a comparação não decide a avaliação automaticamente.
+- Lacunas usam a frase de exemplo salva, contendo a palavra exata. Cartões sem frase compatível são omitidos apenas nesse modo. Digitação ignora caixa, espaços extras e pontuação final; acentos diferentes recebem um aviso.
+- **Palavras em dificuldade** prioriza a proporção de avaliações Errei/Difícil e a quantidade dessas avaliações. A prática focada inclui somente cartões vencidos; datas futuras são preservadas.
+- **Progresso** mostra os últimos 7 ou 30 dias e compara com o período anterior, usando o fuso do perfil. Palavras diferentes, avaliações e dias ativos têm contagens separadas.
+- O botão **+** abre o cadastro rápido, com palavra, tradução e baralho opcional. O formulário fica pronto para a próxima entrada depois de salvar.
+
+Esses recursos usam as tabelas do SQL 001 já aplicado. **Nenhum SQL adicional é necessário.** Para evitar leituras sem limite, as análises consultam até 10.000 registros e avisam quando os resultados são parciais.
+
+## Sugestões com IA (opcional)
+
+No formulário **Nova entrada/Editar**, a IA sugere tradução em português, exemplo no idioma estudado e classe. A prévia permite aplicar ou descartar; salvar continua sendo uma ação separada. Somente a palavra e o idioma são enviados à OpenAI. A chave fica no servidor, nunca no navegador ou no repositório.
+
+Para ativar em **Cloudflare → Worker xlanguage → Settings → Variables and Secrets**, adicione:
+
+| Nome | Tipo e valor |
+| --- | --- |
+| `OPENAI_API_KEY` | Secret: chave de um projeto da OpenAI com acesso à API e faturamento disponível |
+| `OPENAI_ALLOWED_USER_IDS` | Secret: UUID da sua conta em Supabase → Authentication → Users; para mais contas, IDs separados por vírgula |
+| `OPENAI_MODEL` | Opcional: `gpt-5-mini` é o padrão |
+
+Sem chave e lista de contas autorizadas, o botão fica desativado e o endpoint não faz chamadas externas. Não cole a chave no chat ou no GitHub. A API tem custo independente da assinatura do ChatGPT.
+
+Há uma proteção de até cinco pedidos por minuto por conta e um pedido simultâneo, mantida em memória por instância do Worker. Ela não é um limite global de gastos; configure também o orçamento e acompanhe o uso do projeto na OpenAI. A integração usa respostas estruturadas, prazo de 25 segundos e `store: false`.
+
+Os testes validam o contrato da IA com respostas simuladas, sem chamadas pagas. A disponibilidade real só pode ser confirmada após configurar a chave. Os demais testes incluem lacunas, acentos, estatísticas por fuso, dificuldades, cadastro rápido e navegação desktop/mobile.

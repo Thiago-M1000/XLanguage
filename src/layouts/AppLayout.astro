@@ -8,9 +8,10 @@ const nav = [
   { id: "inicio", label: "Visão geral", href: "/", icon: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>' },
   { id: "dicionario", label: "Dicionário", href: "/dicionario", icon: '<path d="M4 19.5V5a2 2 0 0 1 2-2h13v14H6a2 2 0 0 0-2 2.5z"/><path d="M4 19.5A2 2 0 0 0 6 21h13v-4"/>' },
   { id: "revisar", label: "Revisão", href: "/revisao", icon: '<rect x="3" y="7" width="14" height="13" rx="2"/><path d="M7 7V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-2"/>' },
+  { id: "progresso", label: "Progresso", href: "/progresso", icon: '<path d="M4 20h17M7 16v-5M12 16V7M17 16V3"/>' },
   { id:"baralhos", label:"Baralhos", href:"/baralhos", icon:'<rect x="3" y="7" width="14" height="14" rx="2"/><path d="M7 7V3h14v14h-4"/>' },
 ];
-const intro = active === "inicio" ? { heading: "Seu aprendizado,\nem movimento.", description: "Palavras, pronúncia e revisão em um só lugar." } : active === "baralhos" ? { heading:"Seus baralhos",description:"Organize suas palavras e revise cada tema no tempo certo." } : active === "configuracoes" ? { heading:"Tudo do seu jeito",description:"Seus idiomas, sua meta diária e suas preferências." } : active === "dicionario" ? { heading: "Seu dicionário", description: "Palavras e frases com tradução, exemplos e pronúncia." } : { heading: "Hora de revisar", description: "Leia, ouça e tente lembrar antes de revelar a resposta." };
+const intro = active === "progresso" ? {heading:"Seu progresso",description:"Veja sua prática ao longo dos dias e encontre seu ritmo."} : active === "dificuldades" ? {heading:"Palavras em dificuldade",description:"Dê atenção às palavras que ainda precisam de mais prática."} : active === "inicio" ? { heading: "Seu aprendizado,\nem movimento.", description: "Palavras, pronúncia e revisão em um só lugar." } : active === "baralhos" ? { heading:"Seus baralhos",description:"Organize suas palavras e revise cada tema no tempo certo." } : active === "configuracoes" ? { heading:"Tudo do seu jeito",description:"Seus idiomas, sua meta diária e suas preferências." } : active === "dicionario" ? { heading: "Seu dicionário", description: "Palavras e frases com tradução, exemplos e pronúncia." } : { heading: "Hora de revisar", description: "Leia, ouça e tente lembrar antes de revelar a resposta." };
 ---
 <Layout title={`${title} · XLanguage`} bodyClass="dashboard-page xlanguage-app">
   <a href="#conteudo" class="xl-skip">Ir para o conteúdo</a>
@@ -26,7 +27,7 @@ const intro = active === "inicio" ? { heading: "Seu aprendizado,\nem movimento."
       <header class="topbar">
         <LanguagePicker />
         <nav class="header-nav" aria-label="Navegação do app">{nav.map(item => <a href={item.href} class:list={["nav-link", { active: active === item.id }]} aria-current={active === item.id ? "page" : undefined}>{item.label}</a>)}</nav>
-        <div class="header-preferences"><div class="xl-mobile-theme"><ThemeToggle compact /></div></div>
+        <a href="/dicionario?rapido=1#cadastro-rapido" class="xl-quick-top" aria-label="Adicionar palavra rapidamente" title="Adicionar palavra">+</a><div class="header-preferences"><div class="xl-mobile-theme"><ThemeToggle compact /></div></div>
         <button id="open-mobile-menu" type="button" aria-expanded="false" class="mobile-menu-trigger" aria-haspopup="dialog" aria-controls="mobile-menu-dialog" aria-label="Menu principal"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
       </header>
       <main id="conteudo" class="dashboard-main" tabindex="-1">

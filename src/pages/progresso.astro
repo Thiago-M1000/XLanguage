@@ -1,0 +1,33 @@
+---
+import AppLayout from '../layouts/AppLayout.astro';
+import {carregarProgresso} from '../lib/progresso';
+import {mensagemErro} from '../lib/estudo';
+const dias=Astro.url.searchParams.get('dias')==='30'?30:7;
+let dados:Awaited<ReturnType<typeof carregarProgresso>>|null=null,erro='';
+try{dados=await carregarProgresso(Astro.locals.supabase,Astro.locals.user!.id,Astro.locals.perfil.idioma_ativo,Astro.locals.perfil.timezone,dias)}catch(e){erro=mensagemErro(e)}
+const max=dados?Math.max(1,...dados.atual.historico.map(d=>d.palavras)):1;
+const rotulo=(data:string)=>data.split('-').reverse().join('/');
+const diferenca=(a:number,b:number)=>a===b?'Igual ao período anterior':`${a>b?'+':''}${a-b} em relação ao período anterior`;
+---
+<AppLayout title="Progresso" active="progresso">
+ <nav slot="actions" class="xl-mode-nav" aria-label="Período do progresso"><a class:list={['secondary-button',{selected:dias===7}]} aria-current={dias===7?'page':undefined} href="/progresso?dias=7">7 dias</a><a class:list={['secondary-button',{selected:dias===30}]} aria-current={dias===30?'page':undefined} href="/progresso?dias=30">30 dias</a></nav>
+ {erro&&<p class="xl-error" role="alert">{erro}</p>}
+ {dados&&<>
+ <div class="section-heading"><h2 class="section-tab">{rotulo(dados.inicio)} a {rotulo(dados.fim)}</h2><span class="period-note">{Astro.locals.perfil.timezone}</span></div>
+ {dados.incompleto&&<p class="xl-error" role="status">Há mais de 10.000 avaliações neste intervalo. Os números abaixo são parciais.</p>}
+ <section class="xl-period-grid" aria-label="Indicadores do período">{[
+  {nome:'Palavras diferentes',valor:dados.atual.palavras,nota:diferenca(dados.atual.palavras,dados.anterior.palavras)},
+  {nome:'Avaliações realizadas',valor:dados.atual.avaliacoes,nota:diferenca(dados.atual.avaliacoes,dados.anterior.avaliacoes)},
+  {nome:'Dias de prática',valor:dados.atual.diasAtivos,nota:diferenca(dados.atual.diasAtivos,dados.anterior.diasAtivos)},
+  {nome:'Bom ou Fácil',valor:dados.atual.avaliacoes?`${Math.round(dados.atual.acertos/dados.atual.avaliacoes*100)}%`:'—',nota:dados.atual.avaliacoes?`${dados.atual.acertos} de ${dados.atual.avaliacoes} avaliações`:'Sem avaliações neste período'},
+ ].map(m=><article class="tool-card xl-period-card"><h3>{m.nome}</h3><strong>{m.valor}</strong><p>{m.nota}</p></article>)}</section>
+ <section class="tool-card mt-6"><div class="tool-card-heading"><div><h2>Seu ritmo de estudo</h2><p>Palavras diferentes praticadas em cada dia. Repetições da mesma palavra no dia contam uma vez.</p></div></div>
+ <div class="xl-period-chart" style={`--chart-days:${dias}`} aria-label={`Histórico de ${dias} dias`}>{dados.atual.historico.map(d=><div class="xl-period-day" role="img" tabindex="0" aria-label={`${rotulo(d.data)}: ${d.palavras} palavras; ${d.avaliacoes} avaliações`} title={`${rotulo(d.data)} · ${d.palavras} palavras`}><span class="xl-period-track"><span style={`height:${d.palavras/max*100}%`}></span></span><span class="xl-period-date">{d.data.slice(8)}</span><strong>{d.palavras}</strong></div>)}</div>
+ {dias===30&&<p class="xl-help">No celular, deslize o gráfico para ver os demais dias ou abra a tabela abaixo.</p>}
+ <details class="xl-history-details"><summary>Ver histórico em tabela</summary><div class="xl-table-scroll"><table class="xl-history-table"><thead><tr><th>Data</th><th>Palavras</th><th>Avaliações</th></tr></thead><tbody>{dados.atual.historico.toReversed().map(d=><tr><td>{rotulo(d.data)}</td><td>{d.palavras}</td><td>{d.avaliacoes}</td></tr>)}</tbody></table></div></details>
+ {!dados.atual.avaliacoes&&<p class="xl-help mt-5">Sua primeira revisão vai aparecer aqui. <a class="xl-text-link" href="/revisao">Começar agora</a></p>}
+ </section>
+ <section class="tool-card mt-6"><div class="tool-card-heading"><div><h2>Próximo passo</h2><p>Veja quais palavras pedem mais atenção e pratique no tempo certo.</p></div><a href="/dificuldades" class="secondary-button">Palavras em dificuldade</a></div></section>
+ <p class="xl-help mt-5">“Bom ou Fácil” reflete as notas que você escolheu, não uma prova de fluência. A comparação usa os {dias} dias imediatamente anteriores.</p>
+ </>}
+</AppLayout>

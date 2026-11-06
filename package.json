@@ -11,7 +11,7 @@
     "preview": "astro preview",
     "astro": "astro",
     "check": "astro check",
-    "test": "node --experimental-strip-types tests/database.mjs",
+    "test": "node --experimental-strip-types tests/database.mjs && node --experimental-strip-types tests/features.mjs",
     "start": "node ./dist/server/entry.mjs",
     "test:smoke": "node tests/http.mjs",
     "test:browser": "node tests/http.mjs --browser",

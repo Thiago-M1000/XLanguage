@@ -1,0 +1,20 @@
+---
+import AppLayout from '../layouts/AppLayout.astro';
+import {carregarDificuldades} from '../lib/progresso';
+import {mensagemErro} from '../lib/estudo';
+let resultado:Awaited<ReturnType<typeof carregarDificuldades>>={palavras:[],incompleto:false},erro='';
+try{resultado=await carregarDificuldades(Astro.locals.supabase,Astro.locals.user!.id,Astro.locals.perfil.idioma_ativo)}catch(e){erro=mensagemErro(e)}
+const agora=Date.now(),pendentes=resultado.palavras.filter(p=>new Date(p.due_at).getTime()<=agora).length;
+---
+<AppLayout title="Palavras em dificuldade" active="dificuldades">
+ <a slot="actions" class="secondary-button" href="/dicionario">Abrir dicionário</a>
+ {erro&&<p class="xl-error" role="alert">{erro}</p>}
+ {resultado.incompleto&&<p class="xl-help mb-5" role="status">Exibindo uma análise das primeiras 10.000 palavras praticadas. O resultado é parcial.</p>}
+ <section class="contacts-panel"><div class="contacts-heading"><div><h2>Onde concentrar sua prática</h2><p>{resultado.palavras.length} palavras com avaliações “Errei” ou “Difícil”. Ordenadas pela proporção de dificuldade, depois pelo número de ocorrências.</p></div>{pendentes>0&&<a class="primary-button" href="/revisao?foco=dificeis">Revisar {pendentes} pendentes</a>}</div>
+ {resultado.palavras.length>0&&<p class="xl-help xl-panel-note">A lista usa seu histórico de avaliações, não mede fluência. A revisão respeita as próximas datas; uma palavra futura não é antecipada.</p>}
+ <ul class="leads-list">{resultado.palavras.slice(0,100).map(p=><li class="lead-row"><div class="lead-details"><h3 class="lead-name">{p.texto}</h3><p class="xl-word-translation">{p.traducao}</p><p class="xl-help mt-2">{p.erros} de {p.tentativas} avaliações com dificuldade · {Math.round(p.taxaErro*100)}%</p></div><div class="lead-actions"><span class="xl-small-label">{new Date(p.due_at).getTime()<=agora?'Disponível para revisar':`Retorna em ${new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short',timeZone:Astro.locals.perfil.timezone}).format(new Date(p.due_at))}`}</span><a class="edit-button" href={`/dicionario?q=${encodeURIComponent(p.texto)}`}>Ver palavra</a></div></li>)}</ul>
+ {resultado.palavras.length>100&&<p class="xl-help xl-panel-note">Mostrando as 100 palavras com maior prioridade.</p>}
+ {!resultado.palavras.length&&!erro&&<div class="xl-empty"><h3>Nenhuma dificuldade registrada ainda</h3><p>As palavras aparecem aqui depois de uma avaliação “Errei” ou “Difícil”.</p><a class="primary-button mt-5" href="/revisao">Começar revisão</a></div>}
+ {resultado.palavras.length>0&&pendentes===0&&<p class="xl-help xl-panel-note">Todos os cartões desta lista estão agendados para uma data futura. Continue estudando pelo dicionário enquanto espera.</p>}
+ </section>
+</AppLayout>

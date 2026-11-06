@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import {mkdir} from 'node:fs/promises';
 import {chromium} from 'playwright';
-import {user,profile} from './fixtures.mjs';
+import {user,profile,resetReviews} from './fixtures.mjs';
 
 export async function testBrowser(origin){
- profile.idioma_ativo='en-US';
+ profile.idioma_ativo='en-US';resetReviews();
  const browser=await chromium.launch({headless:true,...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,args:['--no-sandbox','--single-process','--no-zygote','--disable-dev-shm-usage','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']}: {})});
  const context=await browser.newContext({viewport:{width:1440,height:1000},colorScheme:'light'});
  // Fontes remotas não fazem parte da validação funcional nem exigem acesso externo.
@@ -27,13 +27,43 @@ export async function testBrowser(origin){
   await saved(()=>page.getByRole('button',{name:'Entrar',exact:true}).click());
   assert.equal(new URL(page.url()).pathname,'/');assert.equal(await page.locator('.metric-card').count(),4);await noOverflow();
   await mkdir('test-results',{recursive:true});
-  await page.screenshot({path:'test-results/dashboard-desktop.png',fullPage:true});
+  await page.screenshot({path:'test-results/dashboard-desktop.png',fullPage:true,animations:'disabled'});
   await page.locator('.sidebar .theme-toggle').click();assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');
   await page.reload();assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');
-  await page.screenshot({path:'test-results/dashboard-dark.png',fullPage:true});
+  await page.screenshot({path:'test-results/dashboard-dark.png',fullPage:true,animations:'disabled'});
   await page.locator('.sidebar .theme-toggle').click();
+  await page.goto(origin+'/revisao?modo=digitar');
+  assert.equal(await page.locator('#ouvir').isVisible(),false);
+  await page.keyboard.press('o');assert.equal(await page.locator('#resposta').isVisible(),false);
+  await page.locator('#resposta-digitada').fill('DEADLINE');
+  await page.getByRole('button',{name:'Conferir resposta',exact:true}).click();
+  assert.equal(await page.locator('#resposta-feedback').getAttribute('data-resultado'),'certa');
+  assert.match(await page.locator('#verso').textContent(),/deadline/);
+  await page.goto(origin+'/revisao?modo=lacunas');
+  assert.match(await page.locator('#exemplo').textContent(),/The _____ is Monday/);
+  await page.locator('#resposta-digitada').fill('wrong');
+  await page.getByRole('button',{name:'Conferir resposta',exact:true}).click();
+  assert.equal(await page.locator('#resposta-feedback').getAttribute('data-resultado'),'diferente');
+  await page.goto(origin+'/dificuldades');await page.getByRole('heading',{name:'deadline',exact:true}).waitFor();await noOverflow();
+  await page.goto(origin+'/progresso?dias=30');assert.equal(await page.locator('.xl-period-day').count(),30);await noOverflow();
+  await page.screenshot({path:'test-results/progresso-desktop.png',fullPage:true,animations:'disabled'});
   await page.goto(origin+'/dicionario');
   await page.getByRole('button',{name:'Nova entrada',exact:true}).click();
+  assert.equal(await page.locator('#sugerir-ia').isEnabled(),true);
+  let aiFail=false;
+  await page.route('**/api/sugerir',async route=>{
+   assert.equal(route.request().postDataJSON().texto,'browser-word');
+   await route.fulfill({status:aiFail?502:200,contentType:'application/json',body:JSON.stringify(aiFail?{erro:'Serviço indisponível no teste.'}:{sugestao:{traducao:'sugestão revisável',exemplo:'A browser-word example.',classe:'substantivo'}})});
+  });
+  await page.locator('#f-texto').fill('browser-word');
+  await page.locator('#sugerir-ia').click();await page.locator('#ia-preview').waitFor({state:'visible'});
+  assert.equal(await page.locator('#f-traducao').inputValue(),'');
+  assert.equal(await page.getByRole('heading',{name:'browser-word',exact:true}).count(),0,'A IA não salva automaticamente');
+  await page.locator('#ia-descartar').click();assert.equal(await page.locator('#ia-preview').isVisible(),false);
+  await page.locator('#sugerir-ia').click();await page.locator('#ia-preview').waitFor({state:'visible'});
+  await page.locator('#ia-aplicar').click();assert.equal(await page.locator('#f-traducao').inputValue(),'sugestão revisável');
+  aiFail=true;await page.locator('#sugerir-ia').click();await page.waitForFunction(()=>document.getElementById('ia-status')?.textContent.includes('Serviço indisponível'));
+  assert.equal(await page.locator('#f-traducao').inputValue(),'sugestão revisável');
   await page.locator('#f-texto').fill('browser-word');await page.locator('#f-traducao').fill('palavra do navegador');
   await page.locator('#f-etiquetas').fill('teste, navegador');await page.locator('#f-exemplo').fill('A browser test.');
   await saved(()=>page.getByRole('button',{name:'Salvar entrada'}).click());
@@ -67,14 +97,22 @@ export async function testBrowser(origin){
   await page.setViewportSize({width:390,height:844});await noOverflow();
   await page.locator('#open-mobile-menu').click();assert.equal(await page.locator('#mobile-menu-dialog').isVisible(),true);
   await page.locator('#close-mobile-menu').click();assert.equal(await page.locator('#mobile-menu-dialog').isVisible(),false);
-  await page.screenshot({path:'test-results/dashboard-mobile.png',fullPage:true});
+  await page.screenshot({path:'test-results/dashboard-mobile.png',fullPage:true,animations:'disabled'});
+  await page.goto(origin+'/progresso?dias=30');await noOverflow();await page.screenshot({path:'test-results/progresso-mobile.png',fullPage:true,animations:'disabled'});
+  await page.goto(origin+'/dificuldades');await noOverflow();
+  await page.goto(origin+'/dicionario?rapido=1#cadastro-rapido');await noOverflow();
+  await page.locator('#quick-texto').fill('mobile-quick');await page.locator('#quick-traducao').fill('entrada rápida');
+  await saved(()=>page.getByRole('button',{name:'Salvar palavra',exact:true}).click());
+  await page.getByRole('heading',{name:'mobile-quick',exact:true}).waitFor();
+  assert.equal(await page.locator('#quick-texto').inputValue(),'');await noOverflow();
+  await page.screenshot({path:'test-results/dicionario-rapido-mobile.png',fullPage:true,animations:'disabled'});
   await page.goto(origin+'/dicionario');await noOverflow();await page.getByRole('button',{name:'Nova entrada',exact:true}).click();
   await noOverflow();await page.locator('#palavra-dialog [data-close]').first().click();
   await page.locator('#open-mobile-menu').click();
   await saved(()=>page.locator('#mobile-menu-dialog').getByRole('button',{name:'Sair da conta'}).click());assert.equal(new URL(page.url()).pathname,'/login');
   await page.goto(origin+'/');assert.equal(new URL(page.url()).pathname,'/login');
   assert.deepEqual(errors,[],'Nenhum erro de JavaScript no navegador');
-  console.log('PASS: navegador desktop/mobile, login, cookies, temas, criar/editar/excluir palavras e baralhos, importação, revisão, preferências, idiomas, menu e logout.');
- }catch(error){await mkdir('test-results',{recursive:true});await page.screenshot({path:'test-results/failure.png',fullPage:true});throw error;}
+  console.log('PASS: navegador desktop/mobile, login, cookies, temas, digitação, lacunas, dificuldades, progresso 7/30 dias, cadastro rápido mobile, criar/editar/excluir palavras e baralhos, importação, revisão, preferências, idiomas, menu e logout.');
+ }catch(error){await mkdir('test-results',{recursive:true});await page.screenshot({path:'test-results/failure.png',fullPage:true,animations:'disabled'});throw error;}
  finally{await context.close();await browser.close();}
 }
