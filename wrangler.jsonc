@@ -3,7 +3,12 @@
   "name": "xlanguage",
   "main": "@astrojs/cloudflare/entrypoints/server",
   "compatibility_date": "2026-11-05",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
   "workers_dev": true,
-  "keep_vars": true
+  "keep_vars": true,
+  "vars": {
+    "PUBLIC_SITE_URL": "https://xlanguage.webeauty.workers.dev"
+  }
 }
