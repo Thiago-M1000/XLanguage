@@ -4,17 +4,169 @@ import type {Baralho} from '../lib/estudo';
 const aiAtiva=iaDisponivel(Astro.locals.user!.id);
 const {baralhos=[]}=Astro.props as {baralhos:Baralho[]};
 ---
-<dialog id="palavra-dialog" class="xl-dialog" aria-labelledby="palavra-titulo"><form id="palavra-form" class="xl-modal-content xl-stack" data-api="palavra">
- <div class="settings-heading"><h2 id="palavra-titulo">Nova entrada</h2><button type="button" class="settings-close" data-close aria-label="Fechar">×</button></div>
- <input type="hidden" name="id" value=""/><input type="hidden" name="idioma" value={Astro.locals.perfil.idioma_ativo}/>
- <div class="xl-field"><label for="f-texto">Palavra ou frase</label><input id="f-texto" name="texto" required maxlength="500" placeholder="Ex.: deadline"/></div>
- <div class="xl-field"><label for="f-traducao">Tradução</label><input id="f-traducao" name="traducao" required maxlength="1000" placeholder="Ex.: prazo"/></div>
- <div class="xl-ai-tools"><button type="button" id="sugerir-ia" class="secondary-button" disabled={!aiAtiva}>Sugerir tradução e exemplo com IA</button><p class="xl-help">{aiAtiva?'Envia somente a palavra e o idioma à OpenAI. Revise a sugestão antes de aplicar; nada é salvo automaticamente.':'Sugestões de IA ainda não estão ativadas para esta conta.'}</p><p id="ia-status" role="status" class="xl-help"></p><div id="ia-preview" class="xl-ai-preview" hidden><strong>Sugestão para conferir</strong><p id="ia-traducao"></p><p id="ia-exemplo"></p><p id="ia-classe" class="xl-help"></p><div class="xl-inline-actions mt-3"><button type="button" id="ia-aplicar" class="primary-button">Aplicar ao formulário</button><button type="button" id="ia-descartar" class="secondary-button">Descartar</button></div></div></div>
- <div class="xl-form-grid"><div class="xl-field"><label for="f-classe">Tipo</label><select id="f-classe" name="classe"><option>expressão</option><option>verbo</option><option>substantivo</option><option>adjetivo</option><option>advérbio</option><option>frase</option></select></div><div class="xl-field"><label for="f-etiquetas">Etiquetas</label><input id="f-etiquetas" name="etiquetas" maxlength="1000" placeholder="trabalho, viagem"/></div></div>
- <div class="xl-field"><label for="f-exemplo">Frase de exemplo</label><textarea id="f-exemplo" name="exemplo" maxlength="2000" rows="3" placeholder="Uma frase para lembrar o contexto."></textarea></div>
- <fieldset class="xl-check-group"><legend>Baralhos</legend>{baralhos.length?baralhos.map(b=><label><input type="checkbox" name="baralhos" value={b.id}/><span>{b.nome}</span></label>):<p class="text-sm text-muted">Crie um baralho para organizar suas palavras. A entrada também pode ficar só no dicionário.</p>}</fieldset>
- <p data-feedback role="alert" class="xl-error empty:hidden"></p><div class="xl-form-actions"><button type="button" class="secondary-button" data-close>Cancelar</button><button type="submit" class="primary-button">Salvar entrada</button></div>
-</form></dialog>
+<dialog id="palavra-dialog" class="xl-dialog word-dialog" aria-labelledby="palavra-titulo">
+ <form id="palavra-form" class="word-form" data-api="palavra">
+  <header class="word-header">
+   <div>
+    <h2 id="palavra-titulo">Nova entrada</h2>
+    <p class="xl-help">Adicione uma palavra ou frase ao seu dicionário.</p>
+   </div>
+   <button type="button" class="settings-close" data-close aria-label="Fechar">×</button>
+  </header>
+
+  <input type="hidden" name="id" value=""/><input type="hidden" name="idioma" value={Astro.locals.perfil.idioma_ativo}/>
+  <div class="word-body">
+   <div class="xl-form-grid">
+    <div class="xl-field"><label for="f-texto">Palavra ou frase</label><input id="f-texto" name="texto" required autofocus maxlength="500" placeholder="Ex.: deadline"/></div>
+    <div class="xl-field"><label for="f-traducao">Tradução</label><input id="f-traducao" name="traducao" required maxlength="1000" placeholder="Ex.: prazo"/></div>
+   </div>
+
+   <div class:list={["xl-ai-tools", { "word-ai-unavailable": !aiAtiva }]}><button type="button" id="sugerir-ia" class="secondary-button" disabled={!aiAtiva}>Sugerir tradução e exemplo com IA</button><p class="xl-help">{aiAtiva?'Envia somente a palavra e o idioma à OpenAI. Revise a sugestão antes de aplicar; nada é salvo automaticamente.':'Sugestões de IA indisponíveis para esta conta.'}</p><p id="ia-status" role="status" class="xl-help"></p><div id="ia-preview" class="xl-ai-preview" hidden><strong>Sugestão para conferir</strong><p id="ia-traducao"></p><p id="ia-exemplo"></p><p id="ia-classe" class="xl-help"></p><div class="xl-inline-actions mt-3"><button type="button" id="ia-aplicar" class="primary-button">Aplicar ao formulário</button><button type="button" id="ia-descartar" class="secondary-button">Descartar</button></div></div></div>
+
+   <section class="word-details" aria-labelledby="word-details-title">
+    <div class="word-section-title">
+     <h3 id="word-details-title">Detalhes da entrada</h3>
+     <span class="xl-help">Opcional</span>
+    </div>
+    <div class="xl-field"><label for="f-exemplo">Frase de exemplo</label><textarea id="f-exemplo" name="exemplo" maxlength="2000" rows="2" placeholder="Uma frase para lembrar o contexto."></textarea></div>
+    <div class="xl-form-grid"><div class="xl-field"><label for="f-classe">Tipo de palavra</label><select id="f-classe" name="classe"><option>expressão</option><option>verbo</option><option>substantivo</option><option>adjetivo</option><option>advérbio</option><option>frase</option></select></div><div class="xl-field"><label for="f-etiquetas">Etiquetas</label><input id="f-etiquetas" name="etiquetas" maxlength="1000" placeholder="trabalho, viagem"/></div></div>
+    <fieldset class="xl-check-group"><legend>Baralhos</legend>{baralhos.length?baralhos.map(b=><label><input type="checkbox" name="baralhos" value={b.id}/><span>{b.nome}</span></label>):<p class="text-sm text-muted">Crie um baralho para organizar suas palavras. A entrada também pode ficar só no dicionário.</p>}</fieldset>
+   </section>
+  </div>
+
+  <footer class="word-footer">
+   <p data-feedback role="alert" class="xl-error"></p>
+   <div class="word-actions">
+    <button type="button" class="secondary-button" data-close>Cancelar</button>
+    <button type="submit" class="primary-button">Salvar entrada</button>
+   </div>
+  </footer>
+ </form>
+</dialog>
+
+<style>
+ .word-dialog {
+  --word-padding: 26px;
+  width: min(650px, calc(100vw - 24px));
+  overflow: hidden;
+ }
+
+ .word-form {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  max-height: calc(100dvh - 36px);
+ }
+
+ .word-header,
+ .word-body,
+ .word-footer {
+  padding-inline: var(--word-padding);
+ }
+
+ .word-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-block: 20px 16px;
+  border-bottom: 1px solid var(--border);
+ }
+
+ .word-header h2 {
+  margin: 0 0 4px;
+  font-weight: 700;
+ }
+
+ .word-header button {
+  flex-shrink: 0;
+ }
+
+ .word-body {
+  display: grid;
+  align-content: start;
+  gap: 18px;
+  padding-block: 20px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+ }
+
+ .word-details {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--app-bg);
+ }
+
+ .word-section-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+ }
+
+ .word-section-title h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+ }
+
+ .word-details fieldset {
+  margin: 0;
+  min-width: 0;
+  background: var(--panel);
+ }
+
+ .word-details fieldset label span {
+  overflow-wrap: anywhere;
+ }
+
+ .word-ai-unavailable {
+  padding: 0;
+  border: 0;
+ }
+
+ .word-ai-unavailable > .xl-help {
+  margin-top: 5px;
+ }
+
+ #ia-status:empty,
+ [data-feedback]:empty {
+  display: none;
+ }
+
+ .word-footer {
+  padding-block: 14px;
+  border-top: 1px solid var(--border);
+ }
+
+ .word-footer [data-feedback] {
+  margin: 0 0 10px;
+ }
+
+ .word-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+ }
+
+ @media (max-width: 600px) {
+  .word-dialog {
+   --word-padding: 16px;
+  }
+
+  .word-header,
+  .word-body {
+   padding-block: 14px;
+  }
+
+  .word-actions > button {
+   flex: 1;
+  }
+ }
+</style>
 
 <script>
  const trigger=document.getElementById('sugerir-ia') as HTMLButtonElement;
@@ -22,7 +174,10 @@ const {baralhos=[]}=Astro.props as {baralhos:Baralho[]};
  const form=document.getElementById('palavra-form') as HTMLFormElement;
  let sugestao:{traducao:string;exemplo:string;classe:string}|null=null,termo='',pedido=0;
  const reset=()=>{pedido++;sugestao=null;preview.hidden=true;status.textContent='';};
- form.addEventListener('reset',reset);
+ form.addEventListener('reset', () => {
+  reset();
+  form.querySelector<HTMLElement>('.word-body')!.scrollTop = 0;
+ });
  (document.getElementById('f-texto') as HTMLInputElement).addEventListener('input',reset);
  trigger.addEventListener('click',async()=>{
   const texto=(document.getElementById('f-texto') as HTMLInputElement).value.trim();
