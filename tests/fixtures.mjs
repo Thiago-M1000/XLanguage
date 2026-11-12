@@ -47,7 +47,8 @@ export async function mockSupabase(req,res){
  else if(path==='/rest/v1/rpc/xl_baralhos_resumo')result=decks.filter(d=>d.idioma===body.p_idioma);
  else if(path==='/rest/v1/rpc/xl_buscar'){
   const itens=words.filter(w=>w.idioma===body.p_idioma&&(!body.p_busca||`${w.texto} ${w.traducao}`.includes(body.p_busca))&&(!body.p_baralho||w.baralhos.includes(body.p_baralho)));
-  result={itens,total:itens.length};
+  const start = (Number(body.p_pagina ?? 1) - 1) * 30;
+  result={itens:itens.slice(start,start+30),total:itens.length};
  }
  else if(path==='/rest/v1/rpc/xl_fila')result=words.filter(w=>w.idioma===body.p_idioma&&!reviewed.has(w.id)&&(!body.p_baralho||w.baralhos.includes(body.p_baralho)));
  else if(path==='/rest/v1/rpc/xl_salvar_palavra'){

@@ -10,22 +10,42 @@ const nav = [
   { id: "revisar", label: "Revisão", href: "/revisao", icon: '<rect x="3" y="7" width="14" height="13" rx="2"/><path d="M7 7V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-2"/>' },
   { id: "progresso", label: "Progresso", href: "/progresso", icon: '<path d="M4 20h17M7 16v-5M12 16V7M17 16V3"/>' },
   { id:"baralhos", label:"Baralhos", href:"/baralhos", icon:'<rect x="3" y="7" width="14" height="14" rx="2"/><path d="M7 7V3h14v14h-4"/>' },
-  { id: "configuracoes", label: "Configurações", href: "/configuracoes", icon: '<path d="m9 3-1 3-3 1-2 4 2 2v3l3 3 3-1 3 1 3-3v-3l2-2-2-4-3-1-1-3z"/><circle cx="11" cy="12" r="3"/>' },
 ];
 const intro = active === "progresso" ? {heading:"Seu progresso",description:"Veja sua prática ao longo dos dias e encontre seu ritmo."} : active === "dificuldades" ? {heading:"Palavras em dificuldade",description:"Dê atenção às palavras que ainda precisam de mais prática."} : active === "inicio" ? { heading: "Seu aprendizado,\nem movimento.", description: "Palavras, pronúncia e revisão em um só lugar." } : active === "baralhos" ? { heading:"Seus baralhos",description:"Organize suas palavras e revise cada tema no tempo certo." } : active === "configuracoes" ? { heading:"Tudo do seu jeito",description:"Seus idiomas, sua meta diária e suas preferências." } : active === "dicionario" ? { heading: "Seu dicionário", description: "Palavras e frases com tradução, exemplos e pronúncia." } : { heading: "Hora de revisar", description: "Leia, ouça e tente lembrar antes de revelar a resposta." };
 ---
 <Layout title={`${title} · XLanguage`} bodyClass="dashboard-page xlanguage-app">
   <a href="#conteudo" class="xl-skip">Ir para o conteúdo</a>
+  <script is:inline>
+    try {
+      if (localStorage.getItem("xlanguage-sidebar") === "collapsed") {
+        document.documentElement.dataset.sidebar = "collapsed";
+      }
+    } catch {}
+  </script>
   <div class="app-shell">
-    <aside class="sidebar" aria-label="Menu principal">
+    <aside id="study-sidebar" class="sidebar" aria-label="Menu principal">
       <a class="rail-brand" href="/" aria-label="XLanguage — início" title="XLanguage"><svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="m8 8 12 16L8 40h9l12-16L17 8H8Z" fill="currentColor"/><path d="m31 8-9 12 5 6L40 8h-9ZM31 28l9 12h-9l-5-7 5-5Z" fill="#0080ff"/></svg><span>XLanguage</span></a>
       <nav class="sidebar-nav" aria-label="Seções do app">
         {nav.map(item => <a href={item.href} class:list={["nav-link", { active: active === item.id }]} aria-current={active === item.id ? "page" : undefined} aria-label={item.label} title={item.label}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><Fragment set:html={item.icon} /></svg><span>{item.label}</span></a>)}
       </nav>
-      <div class="sidebar-bottom"><ThemeToggle compact /><form method="post" action="/api/sair"><button type="submit" class="logout-button" aria-label="Sair da conta" title="Sair da conta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M10 4H4v16h6M14 8l4 4-4 4M8 12h12"/></svg></button></form></div>
+      <div class="sidebar-bottom">
+        <button class="sidebar-account" type="button" popovertarget="sidebar-preferences" aria-label="Preferências da conta" title="Preferências da conta">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="8" r="3"/><path d="M5 20v-2a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5v2"/></svg>
+          <span>Minha conta</span>
+          <span class="sidebar-account-more" aria-hidden="true">⋯</span>
+        </button>
+        <div id="sidebar-preferences" class="sidebar-preferences" popover="auto" aria-label="Preferências da conta">
+          <a class="xl-mobile-nav-link" href="/configuracoes" aria-current={active === "configuracoes" ? "page" : undefined}>Configurações</a>
+      <ThemeToggle />
+      <form method="post" action="/api/sair"><button type="submit" class="secondary-button w-full">Sair da conta</button></form>
+        </div>
+      </div>
     </aside>
     <div class="workspace">
       <header class="topbar">
+        <button id="toggle-study-sidebar" class="sidebar-toggle" type="button" aria-expanded="true" aria-controls="study-sidebar" aria-label="Recolher menu lateral" title="Recolher menu lateral">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M9 5v14m7-10-3 3 3 3"/></svg>
+        </button>
         <LanguagePicker />
         <a href="/dicionario?rapido=1#cadastro-rapido" class="xl-quick-top" aria-label="Adicionar palavra rapidamente" title="Adicionar palavra">+</a><div class="header-preferences"><div class="xl-mobile-theme"><ThemeToggle compact /></div></div>
         <button id="open-mobile-menu" type="button" aria-expanded="false" class="mobile-menu-trigger" aria-haspopup="dialog" aria-controls="mobile-menu-dialog" aria-label="Menu principal"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
@@ -45,14 +65,27 @@ const intro = active === "progresso" ? {heading:"Seu progresso",description:"Vej
   <dialog id="mobile-menu-dialog" class="mobile-menu-dialog" aria-labelledby="mobile-menu-title">
     <div class="settings-heading"><div><span class="settings-eyebrow">XLANGUAGE</span><h2 id="mobile-menu-title">Seu espaço de estudo</h2></div><button id="close-mobile-menu" class="settings-close" type="button" aria-label="Fechar menu" autofocus><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
     <nav class="mobile-menu-actions" aria-label="Navegação mobile">{nav.map(item => <a href={item.href} class:list={["xl-mobile-nav-link", { active: active === item.id }]} aria-current={active === item.id ? "page" : undefined}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><Fragment set:html={item.icon} /></svg><span>{item.label}</span></a>)}</nav>
-    <div class="xl-menu-theme"><ThemeToggle /><form method="post" action="/api/sair" class="mt-4"><button type="submit" class="secondary-button w-full">Sair da conta</button></form></div>
+    <div class="xl-menu-theme sidebar-preference-actions">
+      <a class="xl-mobile-nav-link" href="/configuracoes" aria-current={active === "configuracoes" ? "page" : undefined}>Configurações</a>
+      <ThemeToggle />
+      <form method="post" action="/api/sair"><button type="submit" class="secondary-button w-full">Sair da conta</button></form>
+    </div>
   </dialog>
 </Layout>
 
 <style>
+  .sidebar-toggle {
+    display: none;
+  }
+
+  .sidebar-preference-actions {
+    display: grid;
+    gap: 8px;
+  }
+
   @media (min-width: 761px) {
     .app-shell {
-      grid-template-columns: clamp(168px, 19vw, 208px) minmax(0, 1fr);
+      grid-template-columns: clamp(186px, 22vw, 232px) minmax(0, 1fr);
     }
 
     .sidebar {
@@ -127,14 +160,104 @@ const intro = active === "progresso" ? {heading:"Seu progresso",description:"Vej
     }
 
     .sidebar-bottom {
-      flex-direction: row;
-      justify-content: flex-start;
-      padding: 14px 4px 0;
+      padding: 12px 0 0;
       border-top: 1px solid var(--border);
+    }
+
+    .sidebar-account,
+    .sidebar-toggle {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 42px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--panel);
+      color: var(--ink);
+    }
+
+    .sidebar-account {
+      width: 100%;
+      padding: 8px 10px;
+      text-align: left;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .sidebar-account svg {
+      flex-shrink: 0;
+    }
+
+    .sidebar-account-more {
+      margin-inline-start: auto;
+      font-size: 18px;
+    }
+
+    .sidebar-account:hover,
+    .sidebar-toggle:hover {
+      background: var(--surface);
+    }
+
+    .sidebar-preferences {
+      position: fixed;
+      inset: auto auto 70px 12px;
+      width: 210px;
+      max-height: calc(100dvh - 82px);
+      margin: 0;
+      padding: 8px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--panel);
+      color: var(--ink);
+      box-shadow: 0 10px 32px #0003;
+    }
+
+    .sidebar-preferences:popover-open {
+      display: grid;
+      gap: 6px;
+    }
+
+    .sidebar-preferences :global(.theme-toggle) {
+      width: 100%;
+      border-radius: 8px;
+    }
+
+    .sidebar-toggle {
+      justify-content: center;
+      flex: 0 0 42px;
+      width: 42px;
     }
 
     .topbar {
       padding-inline-start: 24px;
+    }
+
+    :global(html[data-sidebar="collapsed"]) .app-shell {
+      grid-template-columns: 64px minmax(0, 1fr);
+    }
+
+    :global(html[data-sidebar="collapsed"]) .sidebar {
+      padding-inline: 8px;
+    }
+
+    :global(html[data-sidebar="collapsed"]) .rail-brand,
+    :global(html[data-sidebar="collapsed"]) .sidebar .nav-link,
+    :global(html[data-sidebar="collapsed"]) .sidebar-account {
+      justify-content: center;
+      width: 100%;
+      padding-inline: 0;
+    }
+
+    :global(html[data-sidebar="collapsed"]) :is(.rail-brand, .nav-link, .sidebar-account) > span {
+      display: none;
+    }
+
+    :global(html[data-sidebar="collapsed"]) .sidebar-preferences {
+      inset: auto auto 16px 68px;
+    }
+
+    :global(html[data-sidebar="collapsed"]) .sidebar-toggle svg {
+      transform: scaleX(-1);
     }
 
     .topbar .xl-quick-top {
@@ -148,6 +271,25 @@ const intro = active === "progresso" ? {heading:"Seu progresso",description:"Vej
 </style>
 
 <script>
+  const sidebarToggle = document.getElementById("toggle-study-sidebar") as HTMLButtonElement;
+  const root = document.documentElement;
+
+  function syncSidebar() {
+    const collapsed = root.dataset.sidebar === "collapsed";
+    const label = collapsed ? "Abrir menu lateral" : "Recolher menu lateral";
+    sidebarToggle.setAttribute("aria-expanded", String(!collapsed));
+    sidebarToggle.setAttribute("aria-label", label);
+    sidebarToggle.title = label;
+  }
+
+  sidebarToggle.addEventListener("click", () => {
+    const next = root.dataset.sidebar === "collapsed" ? "expanded" : "collapsed";
+    root.dataset.sidebar = next;
+    try { localStorage.setItem("xlanguage-sidebar", next); } catch {}
+    syncSidebar();
+  });
+  syncSidebar();
+
   const menu = document.getElementById("mobile-menu-dialog") as HTMLDialogElement;
   const opener = document.getElementById("open-mobile-menu") as HTMLButtonElement;
   opener.addEventListener("click", () => {
@@ -163,5 +305,6 @@ const intro = active === "progresso" ? {heading:"Seu progresso",description:"Vej
     document.documentElement.classList.remove("xl-menu-open"); opener.setAttribute("aria-expanded", "false");
     if (getComputedStyle(opener).display !== "none") opener.focus();
   });
-  window.matchMedia("(min-width: 761px)").addEventListener("change", event => { if (event.matches && menu.open) menu.close(); });
+  window.matchMedia("(min-width: 761px)").addEventListener("change", event => { if (event.matches && menu.open) menu.close();
+    if (!event.matches) document.getElementById("sidebar-preferences")?.hidePopover(); });
 </script>

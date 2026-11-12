@@ -11,22 +11,148 @@ const pagina=Math.max(1,Math.min(100000,Number(Astro.url.searchParams.get('pagin
 const deckParam=Astro.url.searchParams.get('baralho');const filtro=uuid(deckParam)?deckParam:null;
 let entradas:Palavra[]=[],total=0,baralhos:Baralho[]=[],erro='';
 try{const results=await Promise.all([rpc<{itens:Palavra[];total:number}>(Astro.locals.supabase,'xl_buscar',{p_idioma:language,p_busca:busca,p_pagina:pagina,p_baralho:filtro}),rpc<Baralho[]>(Astro.locals.supabase,'xl_baralhos_resumo',{p_idioma:language})]);entradas=results[0].itens;total=results[0].total;baralhos=results[1];}catch(e){erro=mensagemErro(e)}
-const linkPagina=(n:number)=>{const url=new URL(Astro.url);url.searchParams.set('pagina',String(n));return url.pathname+url.search};
+const porPagina = 30;
+const totalPaginas = Math.min(100000, Math.max(1, Math.ceil(total / porPagina)));
+function linkPagina(numero: number) {
+ const params = new URLSearchParams();
+ if (busca) params.set('q', busca);
+ if (filtro) params.set('baralho', filtro);
+ if (numero > 1) params.set('pagina', String(numero));
+ const query = params.toString();
+ return Astro.url.pathname + (query ? `?${query}` : '') + '#lista-vocabulario';
+}
+if (!erro && pagina > totalPaginas) return Astro.redirect(linkPagina(totalPaginas));
+const numeros = totalPaginas <= 5
+ ? Array.from({length: totalPaginas}, (_, indice) => indice + 1)
+ : [...new Set([1, Math.max(2, pagina - 1), pagina, Math.min(totalPaginas - 1, pagina + 1), totalPaginas])].sort((a, b) => a - b);
+const primeiro = (pagina - 1) * porPagina + 1;
+const ultimo = primeiro + entradas.length - 1;
 ---
 <AppLayout title="Dicionário" active="dicionario">
  <div slot="actions" class="xl-inline-actions"><button type="button" data-open="importar-dialog" class="secondary-button">Importar palavras</button><button type="button" data-open="palavra-dialog" data-new-word class="primary-button">Nova entrada</button></div>
  {erro&&<p role="alert" class="xl-error">{erro}</p>}
  <QuickWord baralhos={baralhos} baralho={filtro}/>
  <div class="xl-home-links"><a class="secondary-button" href="/dificuldades">Palavras em dificuldade</a><a class="secondary-button" href="/progresso">Ver progresso</a></div>
- <section class="contacts-panel xl-dictionary-panel"><div class="contacts-heading"><div><h2>Seu vocabulário em {idioma(language).nome.toLowerCase()}</h2><p>{total} {total===1?'entrada encontrada':'entradas encontradas'}</p></div></div>
+ <section id="lista-vocabulario" class="contacts-panel xl-dictionary-panel"><div class="contacts-heading"><div><h2>Seu vocabulário em {idioma(language).nome.toLowerCase()}</h2><p>{total} {total===1?'entrada encontrada':'entradas encontradas'}</p></div></div>
  <form method="get" class="xl-search-toolbar"><label class="search-field"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><input type="search" name="q" value={busca} maxlength="200" aria-label="Buscar palavra ou tradução" placeholder="Buscar palavra ou tradução…"/></label><select name="baralho" aria-label="Filtrar por baralho"><option value="">Todos os baralhos</option>{baralhos.map(b=><option value={b.id} selected={b.id===filtro}>{b.nome}</option>)}</select><button type="submit" class="secondary-button">Buscar</button></form>
  <ul class="leads-list">{entradas.map(e=><li class="lead-row xl-word-row"><div class="lead-identity"><button type="button" class="xl-audio" data-speak={e.texto} data-lang={e.idioma} aria-label={`Ouvir ${e.texto}`}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="m11 5-6 4H2v6h3l6 4zM15 8a6 6 0 0 1 0 8M18 5a10 10 0 0 1 0 14"/></svg></button><div class="lead-details"><div class="xl-word-title"><h3>{e.texto}</h3><span class="xl-small-label">{e.classe}</span></div><p class="xl-word-translation">{e.traducao}</p>{e.exemplo&&<p class="xl-word-example">{e.exemplo}</p>}<div class="xl-tags">{e.etiquetas.map(t=><span>{t}</span>)}{(e.baralhos??[]).map(id=><span>{baralhos.find(b=>b.id===id)?.nome}</span>)}</div></div></div><div class="lead-actions"><button type="button" class="edit-button" data-word-edit={JSON.stringify(e)}>Editar</button><button type="button" class="edit-button xl-delete-text" data-delete-action="excluir-palavra" data-id={e.id} data-name={e.texto}>Excluir</button></div></li>)}</ul>
  {!entradas.length&&!erro&&<div class="xl-empty"><h3>{busca||filtro?'Nenhuma entrada encontrada':'Seu dicionário começa aqui'}</h3><p>{busca||filtro?'Tente outra busca ou outro baralho.':'Adicione palavras ou importe duas colunas de uma planilha.'}</p></div>}
- {total>30&&<nav class="xl-pagination" aria-label="Páginas do dicionário">{pagina>1?<a class="secondary-button" href={linkPagina(pagina-1)}>Anterior</a>:<span/>}<span>Página {pagina} de {Math.ceil(total/30)}</span>{pagina*30<total?<a class="secondary-button" href={linkPagina(pagina+1)}>Próxima</a>:<span/>}</nav>}
+ {totalPaginas > 1 && !erro && (
+  <nav class="dictionary-pagination" aria-label="Páginas do dicionário">
+   <p>Mostrando <strong>{primeiro}–{ultimo}</strong> de <strong>{total}</strong> entradas</p>
+   <ul>
+    <li>{pagina > 1
+     ? <a class="pagination-direction" href={linkPagina(pagina - 1)} rel="prev" aria-label="Página anterior">‹</a>
+     : <span class="pagination-disabled" aria-hidden="true">‹</span>}</li>
+    {numeros.map((numero, indice) => (
+     <Fragment>
+      {indice > 0 && numero - numeros[indice - 1] > 1 && <li class="pagination-gap" aria-hidden="true">…</li>}
+      <li>{numero === pagina
+       ? <span class="pagination-current" aria-current="page" aria-label={`Página ${numero}`}>{numero}</span>
+       : <a href={linkPagina(numero)} aria-label={`Página ${numero}`}>{numero}</a>}</li>
+     </Fragment>
+    ))}
+    <li>{pagina < totalPaginas
+     ? <a class="pagination-direction" href={linkPagina(pagina + 1)} rel="next" aria-label="Próxima página">›</a>
+     : <span class="pagination-disabled" aria-hidden="true">›</span>}</li>
+   </ul>
+  </nav>
+ )}
  </section>
  <WordForm baralhos={baralhos}/><ConfirmDelete/>
  <dialog id="importar-dialog" class="xl-dialog" aria-labelledby="import-title"><form data-api="importar" class="xl-modal-content xl-stack"><div class="settings-heading"><h2 id="import-title">Importar palavras</h2><button type="button" class="settings-close" data-close aria-label="Fechar">×</button></div><input type="hidden" name="idioma" value={language}/><p class="text-sm text-muted">Cole até 500 linhas com palavra e tradução em duas colunas, separadas por tabulação. Uma terceira coluna pode conter o exemplo. No JSON, use <code>texto</code> e <code>traducao</code>. Os campos <code>exemplo</code> e <code>classe</code> são opcionais. A classe pode ser expressão, verbo, substantivo, adjetivo, advérbio ou frase.</p><div class="xl-field"><label for="bulk-deck">Adicionar ao baralho</label><select id="bulk-deck" name="baralho"><option value="">Somente no dicionário</option>{baralhos.map(b=><option value={b.id}>{b.nome}</option>)}</select></div><div class="xl-field"><label for="bulk-entries">Palavras em {idioma(language).nome}</label><textarea id="bulk-entries" name="entradas" rows="9" required maxlength="400000" placeholder={'deadline\tprazo\nmeeting\treunião'}></textarea></div><p class="text-xs text-muted">Duplicadas no mesmo idioma são ignoradas e não sobrescrevem sua tradução atual.</p><p data-feedback role="status" class="xl-error empty:hidden"></p><div class="xl-form-actions"><button type="button" class="secondary-button" data-close>Cancelar</button><button type="submit" class="primary-button">Importar</button></div></form></dialog>
 </AppLayout>
+
+<style>
+ #lista-vocabulario {
+  scroll-margin-top: 16px;
+ }
+
+ .dictionary-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+ }
+
+ .dictionary-pagination p {
+  color: var(--muted);
+  font-size: 13px;
+ }
+
+ .dictionary-pagination strong {
+  color: var(--ink);
+ }
+
+ .dictionary-pagination ul {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+ }
+
+ .dictionary-pagination :is(a, .pagination-current, .pagination-disabled) {
+  display: grid;
+  place-items: center;
+  min-width: 40px;
+  min-height: 42px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 13px;
+  text-decoration: none;
+ }
+
+ .dictionary-pagination a:hover {
+  background: var(--surface);
+ }
+
+ .dictionary-pagination .pagination-direction,
+ .dictionary-pagination .pagination-disabled {
+  font-size: 20px;
+ }
+
+ .dictionary-pagination .pagination-current {
+  background: var(--blue-soft);
+  color: var(--blue-text);
+  font-weight: 700;
+ }
+
+ .dictionary-pagination .pagination-disabled {
+  color: var(--muted);
+  opacity: .5;
+ }
+
+ .pagination-gap {
+  padding-inline: 2px;
+  color: var(--muted);
+ }
+
+ @media (max-width: 760px) {
+  .dictionary-pagination {
+   justify-content: center;
+   padding-inline: 12px;
+  }
+
+  .dictionary-pagination ul {
+   justify-content: center;
+  }
+
+  .dictionary-pagination :is(a, .pagination-current, .pagination-disabled) {
+   min-width: 30px;
+   min-height: 44px;
+  }
+ }
+</style>
+
 <script>
  import {iniciarUI} from '../scripts/ui';import {falar} from '../scripts/falar';
  iniciarUI();
