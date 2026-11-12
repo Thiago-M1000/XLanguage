@@ -28,6 +28,15 @@ export async function testBrowser(origin){
   assert.equal(new URL(page.url()).pathname,'/');assert.equal(await page.locator('.metric-card').count(),4);await noOverflow();
   await mkdir('test-results',{recursive:true});
   await page.screenshot({path:'test-results/dashboard-desktop.png',fullPage:true,animations:'disabled'});
+  assert.equal(await page.locator('.topbar .header-nav').count(), 0);
+  const sidebarLinks = page.locator('.sidebar-nav .nav-link > span');
+  assert.deepEqual(await sidebarLinks.allTextContents(), ['Visão geral','Dicionário','Revisão','Progresso','Baralhos','Configurações']);
+  for (const label of await sidebarLinks.all()) assert.equal(await label.isVisible(), true);
+  assert.equal(await page.locator('.sidebar-nav [aria-current="page"]').textContent(), 'Visão geral');
+  await page.setViewportSize({width:820,height:820});
+  await noOverflow();
+  assert.equal(await sidebarLinks.first().isVisible(), true);
+  await page.setViewportSize({width:1440,height:900});
   await page.locator('.sidebar .theme-toggle').click();assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');
   await page.reload();assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');
   await page.screenshot({path:'test-results/dashboard-dark.png',fullPage:true,animations:'disabled'});
