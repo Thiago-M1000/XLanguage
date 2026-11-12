@@ -248,7 +248,9 @@ const intro = active === "progresso" ? {heading:"Seu progresso",description:"Vej
       padding-inline: 0;
     }
 
-    :global(html[data-sidebar="collapsed"]) :is(.rail-brand, .nav-link, .sidebar-account) > span {
+    :global(html[data-sidebar="collapsed"]) .sidebar .rail-brand > span,
+    :global(html[data-sidebar="collapsed"]) .sidebar .nav-link > span,
+    :global(html[data-sidebar="collapsed"]) .sidebar .sidebar-account > span {
       display: none;
     }
 
