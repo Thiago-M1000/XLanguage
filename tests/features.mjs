@@ -8,6 +8,8 @@ assert.equal(criarLacuna('a+b','Use a+b today.'),'Use _____ today.');
 assert.equal(criarLacuna('take off','We take off soon. Take off now!'),'We _____ soon. _____ now!');
 assert.equal(criarLacuna('猫','私は猫が好きです。','ja-JP'),'私は_____が好きです。');
 assert.equal(conferirResposta('  HELLO! ','hello'),'certa');
+assert.equal(conferirResposta("I'm just looking", 'I’m just looking.'), 'certa');
+assert.equal(criarLacuna('I’m just looking.', "I'm just looking."), '_____');
 assert.equal(conferirResposta('cafe','café'),'acentos');
 assert.equal(conferirResposta('other','hello'),'diferente');
 assert.equal(conferirResposta('','hello'),'diferente');

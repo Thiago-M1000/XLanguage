@@ -22,7 +22,14 @@ export function iniciarUI(){
     status.textContent=`${result.inseridas} adicionadas; ${result.duplicadas} duplicadas ignoradas. Atualizando…`;
     status.classList.remove('xl-error');
     setTimeout(()=>location.reload(),1200);
-   }else if(form.hasAttribute('data-quick-word')){const url=new URL(location.href);url.searchParams.set('rapido','1');url.searchParams.set('salva','1');url.hash='cadastro-rapido';location.assign(url.pathname+url.search+url.hash);}else location.reload();
+   } else if (form.hasAttribute('data-quick-word')) {
+    const url = new URL(location.href);
+    url.searchParams.set('rapido', '1');
+    url.searchParams.set('salva', '1');
+    url.hash = 'cadastro-rapido';
+    if (url.search === location.search) location.reload();
+    else location.assign(url.pathname + url.search + url.hash);
+   } else location.reload();
   }catch(error){status.textContent=error instanceof Error?error.message:'Não foi possível salvar.';}
   finally{submit.disabled=false;submit.textContent=original;}
  }));

@@ -9,7 +9,7 @@ const disponiveis = IDIOMAS.filter(item => perfil.idiomas.includes(item.codigo))
  <div class="company-picker">
   <button id="study-language-trigger" type="button" class="company-trigger"
    aria-expanded="false" aria-controls="study-language-menu" aria-label={`Idioma de estudo: ${atual.nome}`}>
-   <span class="language-code" aria-hidden="true">{atual.curto}</span>
+   <img class="language-flag" src={`/flags/${atual.bandeira}`} alt="" width="32" height="24" />
    <span class="language-name">{atual.nome}</span>
    <svg class="company-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>
   </button>
@@ -18,7 +18,7 @@ const disponiveis = IDIOMAS.filter(item => perfil.idiomas.includes(item.codigo))
    <div class="language-options">
     {disponiveis.map(item => (
      <button type="button" data-study-language={item.codigo} aria-pressed={item.codigo === atual.codigo}>
-      <span class="language-code" aria-hidden="true">{item.curto}</span>
+      <img class="language-flag" src={`/flags/${item.bandeira}`} alt="" width="32" height="24" />
       <span class="language-name">{item.nome}</span>
       {item.codigo === atual.codigo && <span class="language-current" aria-hidden="true">Ativo ✓</span>}
      </button>
@@ -34,17 +34,12 @@ const disponiveis = IDIOMAS.filter(item => perfil.idiomas.includes(item.codigo))
 </div>
 
 <style>
- .language-code {
-  display: inline-grid;
-  place-items: center;
+ .language-flag {
+  display: block;
   flex: 0 0 32px;
-  height: 28px;
-  border-radius: 7px;
-  background: var(--surface);
-  color: var(--ink);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .03em;
+  width: 32px;
+  height: 24px;
+  object-fit: contain;
  }
 
  .language-name {
@@ -84,11 +79,6 @@ const disponiveis = IDIOMAS.filter(item => perfil.idiomas.includes(item.codigo))
   min-height: 46px;
   padding: 7px 8px;
   font-weight: 500;
- }
-
- .language-options button[aria-pressed="true"] .language-code {
-  background: var(--panel);
-  color: var(--blue-text);
  }
 
  .language-options button[aria-disabled="true"] {
