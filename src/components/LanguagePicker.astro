@@ -162,7 +162,7 @@ const disponiveis = IDIOMAS.filter(item => perfil.idiomas.includes(item.codigo))
   if (open) focus?.focus();
  }
 
- trigger.addEventListener('click', () => setOpen(menu.hidden, active ?? options[0]));
+ trigger.addEventListener('click', () => setOpen(Boolean(menu.hidden), active ?? options[0]));
  trigger.addEventListener('keydown', event => {
   if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
   event.preventDefault();
