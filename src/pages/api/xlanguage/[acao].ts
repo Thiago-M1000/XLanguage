@@ -28,7 +28,22 @@ export const POST:APIRoute=async({params,request,locals})=>{
    const removed=await rpc(db,'xl_excluir_palavra',{p_id:id(b.id)});if(!removed)return Response.json({erro:'Entrada não encontrada.'},{status:404});return Response.json({ok:true});
   }
   if(action==='importar'){
-   const result=await rpc(db,'xl_importar',{p_idioma:lang(),p_entradas:lerEntradas(b.entradas),p_baralho:b.baralho?id(b.baralho):null});return Response.json({ok:true,...result as object});
+   const entradas = lerEntradas(b.entradas);
+   const classificada = entradas.some(entrada => entrada.classe !== undefined);
+   try {
+    const result = await rpc(db, classificada ? 'xl_importar_classificado' : 'xl_importar', {
+     p_idioma: lang(),
+     p_entradas: entradas,
+     p_baralho: b.baralho ? id(b.baralho) : null,
+    });
+    return Response.json({ok: true, ...result as object});
+   } catch (error) {
+    const {code} = error as {code?: string};
+    if (classificada && (code === 'PGRST202' || code === '42883')) {
+     return Response.json({erro: 'A importação com tipo de palavra precisa da atualização 003 no Supabase.'}, {status: 503});
+    }
+    throw error;
+   }
   }
   if(action==='baralho'){
    const values={nome:texto(b.nome,100,true),descricao:texto(b.descricao??'',500),idioma:lang()};

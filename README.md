@@ -24,6 +24,8 @@ npm run dev -- --host
 
 O SQL `001_xlanguage.sql` já foi executado no Supabase correto. Não é necessário executá-lo para atualizar os arquivos do app. O `002_importar_palavras_antigas.sql` foi pulado e continua opcional: nenhuma importação de dados antigos ocorre automaticamente. Também é possível importar pelo Dicionário.
 
+Para importar JSON com tipo de palavra, execute [`003_importar_classe.sql`](supabase/003_importar_classe.sql) no SQL Editor do mesmo projeto Supabase. A migração pode ser aplicada diretamente depois da 001. Use, por exemplo, `[{"texto":"quote","traducao":"orçamento","classe":"substantivo"}]`. `classe` e `exemplo` são opcionais. Sem `classe`, a entrada usa `expressão`. Duplicatas no mesmo idioma mantêm os dados já salvos.
+
 ## Validação
 
 ```sh
@@ -33,7 +35,7 @@ npm run test:smoke
 npm run build
 ```
 
-`npm test` usa PostgreSQL local em memória: valida isolamento entre contas, notas, conflitos, importação e estatísticas. Executa ambos os SQLs apenas nesse banco descartável, sem acessar o Supabase real. `test:smoke` compila e testa as rotas com um serviço Supabase simulado localmente; as credenciais de teste não são usadas em produção. Rode `npm run build` novamente com seu `.env` antes de publicar.
+`npm test` usa PostgreSQL local em memória: valida isolamento entre contas, notas, conflitos, importação e estatísticas. Executa as migrações apenas nesse banco descartável, sem acessar o Supabase real. `test:smoke` compila e testa as rotas com um serviço Supabase simulado localmente; as credenciais de teste não são usadas em produção. Rode `npm run build` novamente com seu `.env` antes de publicar.
 
 Cada push e pull request executa `.github/workflows/validate.yml` com checagem de tipos, banco PostgreSQL descartável e Chromium. O teste de navegador usa os formulários reais para login, cookies, palavras, importação, baralhos, revisão, idiomas, preferências e saída, além de conferir temas e menu mobile. As capturas desktop/mobile ficam no artefato `xlanguage-browser` por sete dias, apenas com os dados fictícios dos testes.
 

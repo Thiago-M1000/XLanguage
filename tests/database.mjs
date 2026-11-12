@@ -12,6 +12,9 @@ const a='00000000-0000-4000-8000-000000000001',b='00000000-0000-4000-8000-000000
 await db.query('insert into auth.users values ($1,$2),($3,$4)',[a,'a@example.test',b,'b@example.test']);
 async function user(id){await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id]);await db.exec('set role authenticated');}
 const scalar=async(sql,args=[])=>Object.values((await db.query(sql,args)).rows[0])[0];
+const classMigration = await readFile(new URL('../supabase/003_importar_classe.sql', import.meta.url), 'utf8');
+await db.exec(classMigration);
+await db.exec(classMigration);
 await user(a);await db.query('insert into public.xl_perfis(user_id) values ($1)',[a]);
 const deck=await scalar("insert into public.xl_baralhos(nome,idioma) values ('Trabalho','en-US') returning id");
 const save=(id,lang,text,translation,decks=[])=>scalar('select public.xl_salvar_palavra($1,$2,$3,$4,$5,$6,$7,$8)',[id,lang,text,translation,'expressão','',[],decks]);
@@ -61,4 +64,22 @@ await db.exec("alter table public.palavras add column user_id uuid");
 await db.query("insert into public.palavras values(1,'legacy A','antiga A','Inglês','en-US',array['original'],$1),(2,'legacy B','antiga B','Inglês','en-US',array[]::text[],$2)",[a,b]);
 await db.exec(legacy);await user(a);assert.equal((await scalar("select public.xl_buscar('en-US','legacy')")).total,1);
 await db.exec('reset role');assert.equal(await scalar('select count(*)::integer from public.palavras'),2);
+const classificados = lerEntradas(JSON.stringify([
+ {texto:'availability',traducao:'disponibilidade',classe:' Substantivo '},
+ {texto:'quickly',traducao:'rapidamente',classe:'advérbio'},
+ {texto:'new entry',traducao:'nova entrada'},
+]));
+const importarClassificados = (entradas) => scalar('select public.xl_importar_classificado($1,$2,$3)', ['en-US',JSON.stringify(entradas),null]);
+assert.deepEqual(await importarClassificados(classificados), {inseridas:3,duplicadas:0});
+assert.equal(await scalar("select classe from public.xl_palavras where texto='availability'"), 'substantivo');
+assert.equal(await scalar("select classe from public.xl_palavras where texto='quickly'"), 'advérbio');
+assert.equal(await scalar("select classe from public.xl_palavras where texto='new entry'"), 'expressão');
+assert.deepEqual(await importarClassificados([{...classificados[0],classe:'verbo'}]), {inseridas:0,duplicadas:1});
+assert.equal(await scalar("select classe from public.xl_palavras where texto='availability'"), 'substantivo');
+assert.throws(() => lerEntradas('[{"texto":"test","traducao":"teste","classe":"inválida"}]'), /Entrada 1.*classe/);
+await assert.rejects(() => importarClassificados([
+ {texto:'rollback class',traducao:'teste',classe:'frase'},
+ {texto:'bad class',traducao:'teste',classe:'inválida'},
+]), /DADOS_INVALIDOS/);
+assert.equal(await scalar("select count(*)::integer from public.xl_palavras where texto='rollback class'"), 0);
 await db.close();console.log('PASS: migração repetível, RLS entre usuários, notas, idempotência, conflitos, fila por idioma/baralho, importação atômica, duplicatas, exclusão e estatísticas por fuso.');

@@ -55,7 +55,7 @@ export async function mockSupabase(req,res){
   const index=words.findIndex(w=>w.id===saved.id);if(index<0)words.push(saved);else words[index]=saved;result=saved.id;
  }
  else if(path==='/rest/v1/rpc/xl_excluir_palavra'){const index=words.findIndex(w=>w.id===body.p_id);if(index>=0)words.splice(index,1);result=index>=0;}
- else if(path==='/rest/v1/rpc/xl_importar'){
+ else if(['/rest/v1/rpc/xl_importar','/rest/v1/rpc/xl_importar_classificado'].includes(path)){
   let inseridas=0,duplicadas=0;
   for(const row of body.p_entradas){if(words.some(w=>w.texto===row.texto&&w.idioma===body.p_idioma)){duplicadas++;continue;}words.push({...word,...row,id:crypto.randomUUID(),idioma:body.p_idioma,baralhos:body.p_baralho?[body.p_baralho]:[]});inseridas++;}
   result={inseridas,duplicadas};

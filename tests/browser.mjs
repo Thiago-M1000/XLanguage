@@ -76,9 +76,10 @@ export async function testBrowser(origin){
   await page.locator('#confirmar-exclusao').getByRole('button',{name:'Cancelar',exact:true}).click();assert.equal(await row.count(),1);
   await row.getByRole('button',{name:'Excluir',exact:true}).click();await saved(()=>page.locator('[data-confirm-delete]').click());
   assert.equal(await page.getByRole('heading',{name:'browser-word',exact:true}).count(),0);
-  await page.getByRole('button',{name:'Importar palavras',exact:true}).click();await page.locator('#bulk-entries').fill('browser-import\timportação pelo navegador');
+  await page.getByRole('button',{name:'Importar palavras',exact:true}).click();await page.locator('#bulk-entries').fill(JSON.stringify([{texto:'browser-import',traducao:'importação pelo navegador',classe:'substantivo'}]));
   await saved(()=>page.locator('#importar-dialog').getByRole('button',{name:'Importar',exact:true}).click());
-  await page.getByRole('heading',{name:'browser-import',exact:true}).waitFor();
+  const importedWord = page.locator('.xl-word-row').filter({has:page.getByRole('heading',{name:'browser-import',exact:true})});
+  await importedWord.getByText('substantivo',{exact:true}).waitFor();
   await page.goto(origin+'/baralhos');await page.getByRole('button',{name:'Novo baralho',exact:true}).click();
   await page.locator('#deck-name').fill('Baralho do navegador');await page.locator('#deck-description').fill('Criado pelo formulário');
   await saved(()=>page.getByRole('button',{name:'Salvar baralho'}).click());

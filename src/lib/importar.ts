@@ -1,3 +1,5 @@
+const classes = ['expressão', 'verbo', 'substantivo', 'adjetivo', 'advérbio', 'frase'];
+
 export function lerEntradas(raw:unknown) {
  if(typeof raw!=='string'||raw.length>400000)throw new Error('Cole até 500 palavras.');
  const text=raw.trim(); if(!text)throw new Error('Cole as palavras para importar.');
@@ -16,6 +18,11 @@ export function lerEntradas(raw:unknown) {
   const traducao=typeof r.traducao==='string'?r.traducao.normalize('NFC').trim():'';
   const exemplo=typeof r.exemplo==='string'?r.exemplo.trim():'';
   if(!texto||texto.length>500||!traducao||traducao.length>1000||exemplo.length>2000)throw new Error(`Entrada ${index+1}: confira palavra, tradução e exemplo.`);
-  return {texto,traducao,exemplo};
+  if (!Object.hasOwn(r, 'classe')) return {texto, traducao, exemplo};
+  const classe = typeof r.classe === 'string' ? r.classe.normalize('NFC').trim().toLocaleLowerCase('pt-BR') : '';
+  if (!classes.includes(classe)) {
+   throw new Error(`Entrada ${index + 1}: use uma classe válida (${classes.join(', ')}).`);
+  }
+  return {texto, traducao, exemplo, classe};
  });
 }
